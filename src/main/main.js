@@ -109,6 +109,33 @@ ipcMain.handle('remove-account', (event, accountId) => {
   }
 });
 
+// Template Management IPC
+const { loadTemplates, saveTemplate, deleteTemplate } = require('./templateStore');
+
+ipcMain.handle('get-templates', () => {
+  return loadTemplates();
+});
+
+ipcMain.handle('save-template', (event, template) => {
+  try {
+    const success = saveTemplate(template);
+    if (success) return { success: true };
+    return { success: false, error: 'Failed to save template' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('delete-template', (event, templateId) => {
+  try {
+    const success = deleteTemplate(templateId);
+    if (success) return { success: true };
+    return { success: false, error: 'Failed to delete template' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 app.whenReady().then(() => {
   // Load saved accounts and add to manager
   const savedAccounts = loadAccounts();
