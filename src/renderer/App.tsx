@@ -460,31 +460,35 @@ const App: FC = () => {
 
           <form onSubmit={handleSendMessage} className="form-container">
             <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <label className="form-label" style={{ marginBottom: 0 }}>XML Stanza</label>
-                <select
-                  className="form-input"
-                  style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: 'auto' }}
-                  onChange={handleTemplateChange}
-                  value={currentTemplate && !(currentTemplate as any).id ? currentTemplate.name : ""}
-                >
-                  <option value="">Load Template...</option>
-                  {STANZA_TEMPLATES.map(t => (
-                    <option key={t.name} value={t.name}>{t.name}</option>
-                  ))}
-                </select>
-
-                {currentTemplate && (
-                  <button
-                    type="button"
-                    onClick={handleSaveTemplate}
-                    className="form-submit-btn"
-                    style={{ width: 'auto', padding: '0.25rem 0.75rem', fontSize: '0.8rem', margin: 0, background: 'var(--success-color)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                    title="Save current configuration as new template"
+              <div style={{ marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                  <label className="form-label" style={{ marginBottom: 0 }}>XML Stanza</label>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <select
+                    className="form-input"
+                    style={{ flex: 1, padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: 'auto' }}
+                    onChange={handleTemplateChange}
+                    value={currentTemplate && !(currentTemplate as any).id ? currentTemplate.name : ""}
                   >
-                    <FiSave /> Save
-                  </button>
-                )}
+                    <option value="">Load Template...</option>
+                    {STANZA_TEMPLATES.map(t => (
+                      <option key={t.name} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+
+                  {currentTemplate && (
+                    <button
+                      type="button"
+                      onClick={handleSaveTemplate}
+                      className="form-submit-btn"
+                      style={{ width: 'auto', padding: '0.25rem 0.75rem', fontSize: '0.8rem', margin: 0, background: 'var(--success-color)', display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}
+                      title="Save current configuration as new template"
+                    >
+                      <FiSave /> Save
+                    </button>
+                  )}
+                </div>
               </div>
 
               {currentTemplate && currentTemplate.fields.length > 0 && (
