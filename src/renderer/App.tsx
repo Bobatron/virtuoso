@@ -482,7 +482,7 @@ const App: FC = () => {
                       type="button"
                       onClick={handleSaveTemplate}
                       className="form-submit-btn"
-                      style={{ width: 'auto', padding: '0.25rem 0.75rem', fontSize: '0.8rem', margin: 0, background: 'var(--success-color)', display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}
+                      style={{ width: 'auto', padding: '0.25rem 0.75rem', fontSize: '0.8rem', margin: 0, background: 'var(--status-online)', display: 'flex', alignItems: 'center', gap: '0.25rem', whiteSpace: 'nowrap' }}
                       title="Save current configuration as new template"
                     >
                       <FiSave /> Save
