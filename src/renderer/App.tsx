@@ -3,6 +3,7 @@ import type { FC } from 'react';
 import toast from 'react-hot-toast';
 import { FiPlus, FiTrash2, FiCheckCircle, FiAlertCircle, FiCircle, FiLoader } from 'react-icons/fi';
 import { STANZA_TEMPLATES } from './templates';
+import type { StanzaTemplate } from './templates';
 import './App.css';
 
 declare global {
@@ -34,6 +35,8 @@ const App: FC = () => {
   const [selectedResponse, setSelectedResponse] = useState<number | null>(null);
   const [localForm, setLocalForm] = useState({ id: '', jid: '', password: '', host: '', port: '5222', connectionMethod: 'auto' });
   const [message, setMessage] = useState('');
+  const [currentTemplate, setCurrentTemplate] = useState<StanzaTemplate | null>(null);
+  const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     // Load accounts from backend on mount
@@ -174,8 +177,39 @@ const App: FC = () => {
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const template = STANZA_TEMPLATES.find(t => t.name === e.target.value);
     if (template) {
-      setMessage(template.xml);
+      setCurrentTemplate(template);
+
+      // Initialize default values
+      const initialValues: Record<string, string> = {};
+      template.fields.forEach(f => {
+        initialValues[f.key] = f.defaultValue || '';
+      });
+      setTemplateValues(initialValues);
+
+      // Generate initial XML
+      let xml = template.xml;
+      Object.entries(initialValues).forEach(([key, val]) => {
+        xml = xml.replace(new RegExp(`{{${key}}}`, 'g'), val);
+      });
+      setMessage(xml);
+
       toast.success(`Loaded template: ${template.name}`);
+    } else {
+      setCurrentTemplate(null);
+      setTemplateValues({});
+    }
+  };
+
+  const handleTemplateValueChange = (key: string, value: string) => {
+    const newValues = { ...templateValues, [key]: value };
+    setTemplateValues(newValues);
+
+    if (currentTemplate) {
+      let xml = currentTemplate.xml;
+      Object.entries(newValues).forEach(([k, v]) => {
+        xml = xml.replace(new RegExp(`{{${k}}}`, 'g'), v);
+      });
+      setMessage(xml);
     }
   };
 
@@ -358,14 +392,36 @@ const App: FC = () => {
                   className="form-input"
                   style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: 'auto' }}
                   onChange={handleTemplateChange}
-                  value=""
+                  value={currentTemplate?.name || ""}
                 >
-                  <option value="" disabled>Load Template...</option>
+                  <option value="">Load Template...</option>
                   {STANZA_TEMPLATES.map(t => (
                     <option key={t.name} value={t.name}>{t.name}</option>
                   ))}
                 </select>
               </div>
+
+              {currentTemplate && currentTemplate.fields.length > 0 && (
+                <div className="template-fields" style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Template Parameters</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    {currentTemplate.fields.map(field => (
+                      <div key={field.key}>
+                        <label style={{ display: 'block', fontSize: '0.7rem', marginBottom: '0.25rem', color: 'var(--text-secondary)' }}>{field.label}</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
+                          placeholder={field.placeholder}
+                          value={templateValues[field.key] || ''}
+                          onChange={(e) => handleTemplateValueChange(field.key, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <textarea
                 className="form-input form-textarea"
                 value={message}
