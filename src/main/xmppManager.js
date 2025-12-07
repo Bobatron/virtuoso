@@ -58,38 +58,56 @@ class XMPPManager {
     });
     console.log(`[XMPP] Applied TLS options: ${connectionMethod !== 'plain'}`);
     console.log(`[XMPP] XMPP client created for ${accountId}`);
-    xmpp.on('error', err => {
+
+    // Store listener references for cleanup
+    const errorListener = err => {
       console.error(`[XMPP][${accountId}] Connection error:`, err);
-      if (this.accounts[accountId].onStatus) {
+      if (this.accounts[accountId]?.onStatus) {
         this.accounts[accountId].onStatus('error');
       }
-    });
-    xmpp.on('status', status => {
+    };
+
+    const statusListener = status => {
       console.log(`[XMPP][${accountId}] Status:`, status);
-      if (this.accounts[accountId].onStatus) {
+      if (this.accounts[accountId]?.onStatus) {
         this.accounts[accountId].onStatus(status);
       }
-    });
-    xmpp.on('online', address => {
+    };
+
+    const onlineListener = address => {
       console.log(`[XMPP][${accountId}] Connected as:`, address.toString());
-      if (this.accounts[accountId].onStatus) {
+      if (this.accounts[accountId]?.onStatus) {
         this.accounts[accountId].onStatus('connected');
       }
-    });
-    xmpp.on('offline', () => {
+    };
+
+    const offlineListener = () => {
       console.log(`[XMPP][${accountId}] Disconnected.`);
-      if (this.accounts[accountId].onStatus) {
+      if (this.accounts[accountId]?.onStatus) {
         this.accounts[accountId].onStatus('disconnected');
       }
-    });
-    // Attach stanza listener once per account
-    this.accounts[accountId] = { xmpp, jid, password, host, port, onStanza: null };
-    xmpp.on('stanza', stanza => {
-      const acc = this.accounts[accountId];
-      if (acc && acc.onStanza) {
-        acc.onStanza(stanza);
+    };
+
+    const stanzaListener = stanza => {
+      console.log(`[XMPP][${accountId}] Stanza:`, stanza.toString());
+      if (this.accounts[accountId]?.onStanza) {
+        this.accounts[accountId].onStanza(stanza.toString());
       }
-    });
+    };
+
+    xmpp.on('error', errorListener);
+    xmpp.on('status', statusListener);
+    xmpp.on('online', onlineListener);
+    xmpp.on('offline', offlineListener);
+    xmpp.on('stanza', stanzaListener);
+
+    this.accounts[accountId] = {
+      xmpp,
+      onStanza: null,
+      onStatus: null,
+      // Store listeners for cleanup
+      listeners: { errorListener, statusListener, onlineListener, offlineListener, stanzaListener }
+    };
     console.log(`[XMPP] Account ${accountId} added to manager`);
     return xmpp;
   }
@@ -153,11 +171,22 @@ class XMPPManager {
 
   async removeAccount(accountId) {
     const source = this.accountData[accountId]?._source || 'ui';
+    const account = this.accounts[accountId];
 
     // Disconnect first and wait for it to complete
     try {
-      const account = this.accounts[accountId];
       if (account && account.xmpp) {
+        // Remove all event listeners to prevent memory leaks
+        if (account.listeners) {
+          const { errorListener, statusListener, onlineListener, offlineListener, stanzaListener } = account.listeners;
+          account.xmpp.removeListener('error', errorListener);
+          account.xmpp.removeListener('status', statusListener);
+          account.xmpp.removeListener('online', onlineListener);
+          account.xmpp.removeListener('offline', offlineListener);
+          account.xmpp.removeListener('stanza', stanzaListener);
+          console.log(`[XMPP] Removed event listeners for ${accountId}`);
+        }
+
         await account.xmpp.stop();
       }
     } catch (err) {
@@ -168,6 +197,7 @@ class XMPPManager {
     removeAccountFromStore(accountId, source);
     delete this.accounts[accountId];
     delete this.accountData[accountId];
+    console.log(`[XMPP] Account ${accountId} fully removed`);
   }
 
   removeMessageListener(accountId, listener) {
