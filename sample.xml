@@ -1,0 +1,3 @@
+<message to="other@localhost/virtuoso" type="chat">
+  <body>Hello from Virtuoso!</body>
+</message>

@@ -1,0 +1,33 @@
+{
+  "name": "virtuoso",
+  "version": "1.0.0",
+  "description": "Virtuoso is a desktop tool for testing and debugging XMPP stanza messages, inspired by Postman but focused on XMPP workflows. It allows users to connect to XMPP servers as multiple accounts, send custom XML stanzas, and view responses in real time.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build",
+    "start": "cross-env NODE_ENV=development electron src/main/main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@xmpp/client": "^0.14.0",
+    "electron": "^39.2.6",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "cross-env": "^10.1.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6"
+  }
+}
