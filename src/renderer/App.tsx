@@ -117,15 +117,16 @@ const App: React.FC = () => {
   };
 
   const handleConnect = async (id: string) => {
+    // Don't set status here - let the backend status events handle it
+    // This prevents showing 'connected' when the connection actually failed
     // @ts-ignore
-    const result = await window.electron?.invoke('connect-account', id);
-    setAccounts(accs => accs.map(acc => acc.id === id ? { ...acc, status: result?.success ? 'connected' : acc.status } : acc));
+    await window.electron?.invoke('connect-account', id);
   };
 
   const handleDisconnect = async (id: string) => {
+    // Don't set status here - let the backend status events handle it
     // @ts-ignore
-    const result = await window.electron?.invoke('disconnect-account', id);
-    setAccounts(accs => accs.map(acc => acc.id === id ? { ...acc, status: result?.success ? 'disconnected' : acc.status } : acc));
+    await window.electron?.invoke('disconnect-account', id);
   };
 
   const handleRemove = async (id: string) => {
@@ -187,9 +188,15 @@ const App: React.FC = () => {
               {/* Toggle switch for connect/disconnect */}
               <span style={{ marginLeft: 8 }}>
                 <label style={{ display: 'inline-block', width: 36, height: 20, position: 'relative', maxWidth: '100%' }}>
-                  <input type="checkbox" checked={acc.status === 'connected'} onChange={() => acc.status === 'connected' ? handleDisconnect(acc.id) : handleConnect(acc.id)} style={{ opacity: 0, width: 0, height: 0 }} />
-                  <span style={{ position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, background: acc.status === 'connected' ? '#43a047' : '#ccc', borderRadius: 20, transition: 'background 0.2s', width: 36, height: 20 }}></span>
-                  <span style={{ position: 'absolute', left: acc.status === 'connected' ? 18 : 2, top: 2, width: 16, height: 16, background: '#fff', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }}></span>
+                  <input
+                    type="checkbox"
+                    checked={acc.status === 'connected' || acc.status === 'online'}
+                    disabled={acc.status === 'connecting' || acc.status === 'opening' || acc.status === 'connect'}
+                    onChange={() => (acc.status === 'connected' || acc.status === 'online') ? handleDisconnect(acc.id) : handleConnect(acc.id)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{ position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, background: (acc.status === 'connected' || acc.status === 'online') ? '#43a047' : '#ccc', borderRadius: 20, transition: 'background 0.2s', width: 36, height: 20 }}></span>
+                  <span style={{ position: 'absolute', left: (acc.status === 'connected' || acc.status === 'online') ? 18 : 2, top: 2, width: 16, height: 16, background: '#fff', borderRadius: '50%', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }}></span>
                 </label>
               </span>
             </li>
