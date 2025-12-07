@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import toast from 'react-hot-toast';
 import { FiPlus, FiTrash2, FiCheckCircle, FiAlertCircle, FiCircle, FiLoader } from 'react-icons/fi';
+import { STANZA_TEMPLATES } from './templates';
 import './App.css';
 
 declare global {
@@ -168,6 +169,14 @@ const App: FC = () => {
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value);
+  };
+
+  const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const template = STANZA_TEMPLATES.find(t => t.name === e.target.value);
+    if (template) {
+      setMessage(template.xml);
+      toast.success(`Loaded template: ${template.name}`);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -343,7 +352,20 @@ const App: FC = () => {
 
           <form onSubmit={handleSendMessage} className="form-container">
             <div className="form-group">
-              <label className="form-label">XML Stanza</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label className="form-label" style={{ marginBottom: 0 }}>XML Stanza</label>
+                <select
+                  className="form-input"
+                  style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: 'auto' }}
+                  onChange={handleTemplateChange}
+                  value=""
+                >
+                  <option value="" disabled>Load Template...</option>
+                  {STANZA_TEMPLATES.map(t => (
+                    <option key={t.name} value={t.name}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
               <textarea
                 className="form-input form-textarea"
                 value={message}
