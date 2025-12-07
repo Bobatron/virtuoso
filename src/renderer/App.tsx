@@ -192,28 +192,16 @@ const App: FC = () => {
     if (!value) return;
 
     // Check standard templates
-    let template: StanzaTemplate | SavedTemplate | undefined = STANZA_TEMPLATES.find(t => t.name === value);
-    let isSaved = false;
-
-    // Check saved templates
-    if (!template) {
-      template = savedTemplates.find(t => t.id === value);
-      isSaved = true;
-    }
+    const template = STANZA_TEMPLATES.find(t => t.name === value);
 
     if (template) {
       setCurrentTemplate(template);
 
       // Initialize values
-      let initialValues: Record<string, string> = {};
-
-      if (isSaved && (template as SavedTemplate).values) {
-        initialValues = { ...(template as SavedTemplate).values };
-      } else {
-        template.fields.forEach(f => {
-          initialValues[f.key] = f.defaultValue || '';
-        });
-      }
+      const initialValues: Record<string, string> = {};
+      template.fields.forEach(f => {
+        initialValues[f.key] = f.defaultValue || '';
+      });
 
       setTemplateValues(initialValues);
 
@@ -229,6 +217,19 @@ const App: FC = () => {
       setCurrentTemplate(null);
       setTemplateValues({});
     }
+  };
+
+  const handleLoadSavedTemplate = (template: SavedTemplate) => {
+    setCurrentTemplate(template);
+    setTemplateValues({ ...template.values });
+
+    // Generate XML from saved values
+    let xml = template.xml;
+    Object.entries(template.values).forEach(([key, val]) => {
+      xml = xml.replace(new RegExp(`{{${key}}}`, 'g'), val);
+    });
+    setMessage(xml);
+    toast.success(`Loaded saved template: ${template.name}`);
   };
 
   const handleSaveTemplate = async () => {
@@ -254,22 +255,19 @@ const App: FC = () => {
     }
   };
 
-  const handleDeleteTemplate = async () => {
-    if (!currentTemplate || !(currentTemplate as any).id) return;
-    const templateId = (currentTemplate as any).id;
-
-    // Only allow deleting saved templates (check if it exists in savedTemplates)
-    if (!savedTemplates.find(t => t.id === templateId)) return;
-
-    if (!confirm(`Delete template "${currentTemplate.name}"?`)) return;
+  const handleDeleteTemplate = async (templateId: string, templateName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent loading the template when clicking delete
+    if (!confirm(`Delete template "${templateName}"?`)) return;
 
     // @ts-ignore
     const result = await window.electron?.invoke('delete-template', templateId);
     if (result?.success) {
       setSavedTemplates(prev => prev.filter(t => t.id !== templateId));
-      setCurrentTemplate(null);
-      setTemplateValues({});
-      setMessage('');
+      if ((currentTemplate as any)?.id === templateId) {
+        setCurrentTemplate(null);
+        setTemplateValues({});
+        setMessage('');
+      }
       toast.success('Template deleted');
     } else {
       toast.error('Failed to delete template');
@@ -468,47 +466,25 @@ const App: FC = () => {
                   className="form-input"
                   style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: 'auto' }}
                   onChange={handleTemplateChange}
-                  value={currentTemplate ? ((currentTemplate as any).id || currentTemplate.name) : ""}
+                  value={currentTemplate && !(currentTemplate as any).id ? currentTemplate.name : ""}
                 >
                   <option value="">Load Template...</option>
-                  <optgroup label="Standard Templates">
-                    {STANZA_TEMPLATES.map(t => (
-                      <option key={t.name} value={t.name}>{t.name}</option>
-                    ))}
-                  </optgroup>
-                  {savedTemplates.length > 0 && (
-                    <optgroup label="Saved Templates">
-                      {savedTemplates.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </optgroup>
-                  )}
+                  {STANZA_TEMPLATES.map(t => (
+                    <option key={t.name} value={t.name}>{t.name}</option>
+                  ))}
                 </select>
 
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  {currentTemplate && (
-                    <button
-                      type="button"
-                      onClick={handleSaveTemplate}
-                      className="form-submit-btn"
-                      style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', margin: 0, background: 'var(--success-color)' }}
-                      title="Save current configuration as new template"
-                    >
-                      <FiSave />
-                    </button>
-                  )}
-                  {currentTemplate && (currentTemplate as any).id && savedTemplates.find(t => t.id === (currentTemplate as any).id) && (
-                    <button
-                      type="button"
-                      onClick={handleDeleteTemplate}
-                      className="form-submit-btn"
-                      style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', margin: 0, background: 'var(--error-color)' }}
-                      title="Delete saved template"
-                    >
-                      <FiTrash2 />
-                    </button>
-                  )}
-                </div>
+                {currentTemplate && (
+                  <button
+                    type="button"
+                    onClick={handleSaveTemplate}
+                    className="form-submit-btn"
+                    style={{ width: 'auto', padding: '0.25rem 0.75rem', fontSize: '0.8rem', margin: 0, background: 'var(--success-color)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    title="Save current configuration as new template"
+                  >
+                    <FiSave /> Save
+                  </button>
+                )}
               </div>
 
               {currentTemplate && currentTemplate.fields.length > 0 && (
@@ -548,6 +524,54 @@ const App: FC = () => {
               </div>
             )}
           </form>
+
+          {savedTemplates.length > 0 && (
+            <div className="saved-templates-section" style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
+              <h3 className="section-title" style={{ fontSize: '0.9rem', marginBottom: '0.75rem' }}>Saved Templates</h3>
+              <div className="saved-templates-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                {savedTemplates.map(t => (
+                  <div
+                    key={t.id}
+                    className={`saved-template-card ${currentTemplate && (currentTemplate as any).id === t.id ? 'selected' : ''}`}
+                    onClick={() => handleLoadSavedTemplate(t)}
+                    style={{
+                      padding: '0.75rem',
+                      background: 'var(--bg-secondary)',
+                      borderRadius: 'var(--radius-sm)',
+                      border: currentTemplate && (currentTemplate as any).id === t.id ? '1px solid var(--primary-color)' : '1px solid var(--border-light)',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '0.25rem' }}>{t.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {t.description}
+                    </div>
+                    <button
+                      onClick={(e) => handleDeleteTemplate(t.id, t.name, e)}
+                      style={{
+                        position: 'absolute',
+                        top: '0.5rem',
+                        right: '0.5rem',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        padding: '0.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Delete template"
+                    >
+                      <FiTrash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="responses-section">
             <div className="responses-header">
