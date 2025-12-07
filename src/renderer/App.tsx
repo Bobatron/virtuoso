@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import type { FC } from 'react';
 import toast from 'react-hot-toast';
-import { FiPlus, FiTrash2, FiCheckCircle, FiAlertCircle, FiCircle, FiLoader } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiCheckCircle, FiAlertCircle, FiCircle, FiLoader, FiSave } from 'react-icons/fi';
 import { STANZA_TEMPLATES } from './templates';
 import type { StanzaTemplate } from './templates';
 import './App.css';
+
+interface SavedTemplate extends StanzaTemplate {
+  id: string;
+  values: Record<string, string>;
+}
 
 declare global {
   interface Window {
@@ -37,9 +42,10 @@ const App: FC = () => {
   const [message, setMessage] = useState('');
   const [currentTemplate, setCurrentTemplate] = useState<StanzaTemplate | null>(null);
   const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
 
   useEffect(() => {
-    // Load accounts from backend on mount
+    // Load accounts and templates from backend on mount
     // @ts-ignore
     window.electron?.invoke('get-accounts').then((data) => {
       if (data) {
@@ -55,6 +61,13 @@ const App: FC = () => {
           };
         });
         setAccounts(loaded);
+      }
+    });
+
+    // @ts-ignore
+    window.electron?.invoke('get-templates').then((templates: SavedTemplate[]) => {
+      if (templates) {
+        setSavedTemplates(templates);
       }
     });
   }, []);
@@ -175,15 +188,33 @@ const App: FC = () => {
   };
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const template = STANZA_TEMPLATES.find(t => t.name === e.target.value);
+    const value = e.target.value;
+    if (!value) return;
+
+    // Check standard templates
+    let template: StanzaTemplate | SavedTemplate | undefined = STANZA_TEMPLATES.find(t => t.name === value);
+    let isSaved = false;
+
+    // Check saved templates
+    if (!template) {
+      template = savedTemplates.find(t => t.id === value);
+      isSaved = true;
+    }
+
     if (template) {
       setCurrentTemplate(template);
 
-      // Initialize default values
-      const initialValues: Record<string, string> = {};
-      template.fields.forEach(f => {
-        initialValues[f.key] = f.defaultValue || '';
-      });
+      // Initialize values
+      let initialValues: Record<string, string> = {};
+
+      if (isSaved && (template as SavedTemplate).values) {
+        initialValues = { ...(template as SavedTemplate).values };
+      } else {
+        template.fields.forEach(f => {
+          initialValues[f.key] = f.defaultValue || '';
+        });
+      }
+
       setTemplateValues(initialValues);
 
       // Generate initial XML
@@ -197,6 +228,51 @@ const App: FC = () => {
     } else {
       setCurrentTemplate(null);
       setTemplateValues({});
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!currentTemplate) return;
+
+    const name = prompt('Enter a name for this template:', currentTemplate.name);
+    if (!name) return;
+
+    const newTemplate: SavedTemplate = {
+      ...currentTemplate,
+      id: crypto.randomUUID(),
+      name,
+      values: templateValues
+    };
+
+    // @ts-ignore
+    const result = await window.electron?.invoke('save-template', newTemplate);
+    if (result?.success) {
+      setSavedTemplates([...savedTemplates, newTemplate]);
+      toast.success('Template saved successfully');
+    } else {
+      toast.error('Failed to save template');
+    }
+  };
+
+  const handleDeleteTemplate = async () => {
+    if (!currentTemplate || !(currentTemplate as any).id) return;
+    const templateId = (currentTemplate as any).id;
+
+    // Only allow deleting saved templates (check if it exists in savedTemplates)
+    if (!savedTemplates.find(t => t.id === templateId)) return;
+
+    if (!confirm(`Delete template "${currentTemplate.name}"?`)) return;
+
+    // @ts-ignore
+    const result = await window.electron?.invoke('delete-template', templateId);
+    if (result?.success) {
+      setSavedTemplates(prev => prev.filter(t => t.id !== templateId));
+      setCurrentTemplate(null);
+      setTemplateValues({});
+      setMessage('');
+      toast.success('Template deleted');
+    } else {
+      toast.error('Failed to delete template');
     }
   };
 
@@ -392,13 +468,47 @@ const App: FC = () => {
                   className="form-input"
                   style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', height: 'auto' }}
                   onChange={handleTemplateChange}
-                  value={currentTemplate?.name || ""}
+                  value={currentTemplate ? ((currentTemplate as any).id || currentTemplate.name) : ""}
                 >
                   <option value="">Load Template...</option>
-                  {STANZA_TEMPLATES.map(t => (
-                    <option key={t.name} value={t.name}>{t.name}</option>
-                  ))}
+                  <optgroup label="Standard Templates">
+                    {STANZA_TEMPLATES.map(t => (
+                      <option key={t.name} value={t.name}>{t.name}</option>
+                    ))}
+                  </optgroup>
+                  {savedTemplates.length > 0 && (
+                    <optgroup label="Saved Templates">
+                      {savedTemplates.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {currentTemplate && (
+                    <button
+                      type="button"
+                      onClick={handleSaveTemplate}
+                      className="form-submit-btn"
+                      style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', margin: 0, background: 'var(--success-color)' }}
+                      title="Save current configuration as new template"
+                    >
+                      <FiSave />
+                    </button>
+                  )}
+                  {currentTemplate && (currentTemplate as any).id && savedTemplates.find(t => t.id === (currentTemplate as any).id) && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteTemplate}
+                      className="form-submit-btn"
+                      style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem', margin: 0, background: 'var(--error-color)' }}
+                      title="Delete saved template"
+                    >
+                      <FiTrash2 />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {currentTemplate && currentTemplate.fields.length > 0 && (
