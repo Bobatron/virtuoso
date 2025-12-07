@@ -16,5 +16,17 @@
     "password": "password",
     "host": "localhost",
     "port": "5222"
+  },
+  "alice": {
+    "jid": "alice@localhost",
+    "password": "password",
+    "host": "localhost",
+    "port": "5222"
+  },
+  "joe": {
+    "jid": "joe@localhost",
+    "password": "password",
+    "host": "localhost",
+    "port": "5222"
   }
 }
