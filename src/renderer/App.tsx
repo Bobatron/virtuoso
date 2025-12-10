@@ -77,12 +77,12 @@ const App: FC = () => {
   }, []);
 
   // Memoized stanzaListener to avoid duplicate subscriptions
-  const stanzaListener = React.useCallback((_event: any, accountId: string, stanza: string) => {
+  const stanzaListener = React.useCallback((accountId: string, stanza: string) => {
     setResponses(prev => [...prev, { accountId, stanza }]);
   }, []);
 
   // Memoized statusListener to update account status
-  const statusListener = React.useCallback((_event: any, accountId: string, status: string) => {
+  const statusListener = React.useCallback((accountId: string, status: string) => {
     console.log(`[UI] Status update for ${accountId}: ${status}`);
     setAccounts(prev =>
       prev.map(acc =>
