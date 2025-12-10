@@ -136,7 +136,15 @@ const App: FC = () => {
     });
 
     if (result?.success) {
-      setAccounts([...accounts, { ...localForm, status: 'disconnected' }]);
+      setAccounts([...accounts, { 
+        id: localForm.id,
+        jid: localForm.jid,
+        password: localForm.password,
+        host: localForm.host,
+        port: localForm.port,
+        connectionMethod: localForm.connectionMethod,
+        status: 'disconnected' 
+      }]);
       setLocalForm({ id: '', jid: '', password: '', host: '', port: '5222', connectionMethod: 'auto' });
       setShowAddForm(false);
       toast.success(`Account "${localForm.id}" added successfully`);
@@ -315,7 +323,11 @@ const App: FC = () => {
         <div className="sidebar-header">
           <button
             className="add-account-btn"
-            onClick={() => { setShowAddForm(true); setSelectedAccount(null); }}
+            onClick={() => { 
+              setShowAddForm(true); 
+              setSelectedAccount(null); 
+              setLocalForm({ id: '', jid: '', password: '', host: '', port: '5222', connectionMethod: 'auto' });
+            }}
           >
             <FiPlus style={{ marginRight: '0.5rem', verticalAlign: 'middle' }} />
             Add Account
