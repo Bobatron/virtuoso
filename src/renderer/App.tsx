@@ -7,10 +7,20 @@ import type { StanzaTemplate } from './templates';
 import './App.css';
 import { parseStanza } from './stanzaParser';
 import type { ParsedField } from './stanzaParser';
+import { generateTimestamp, generateUniqueId, parsePlaceholders, resolvePlaceholders } from '../shared/placeholderParser';
+import type { Placeholder } from '../types/placeholder';
 
 interface SavedTemplate extends StanzaTemplate {
   id: string;
   values: Record<string, string>;
+}
+
+interface PlaceholderFieldMeta {
+  name: string;
+  label: string;
+  type: Placeholder['type'];
+  readOnly: boolean;
+  placeholder?: string;
 }
 
 declare global {
@@ -44,11 +54,15 @@ const App: FC = () => {
   const [message, setMessage] = useState('');
   const [currentTemplate, setCurrentTemplate] = useState<StanzaTemplate | null>(null);
   const [templateValues, setTemplateValues] = useState<Record<string, string>>({});
+  const [activePlaceholders, setActivePlaceholders] = useState<Placeholder[]>([]);
   const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveName, setSaveName] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const accountIdInputRef = useRef<HTMLInputElement>(null);
+  const templateFieldMap = React.useMemo(() => {
+    return new Map((currentTemplate?.fields ?? []).map((f) => [f.key, f]));
+  }, [currentTemplate]);
 
   useEffect(() => {
     // Load accounts and templates from backend on mount
@@ -77,6 +91,26 @@ const App: FC = () => {
       }
     });
   }, []);
+
+  const buildTemplateState = React.useCallback(
+    (template: StanzaTemplate | SavedTemplate, savedValues?: Record<string, string>) => {
+      const parsed = parsePlaceholders(template.xml);
+      const values: Record<string, string> = { ...(savedValues || {}) };
+
+      parsed.placeholders.forEach((ph) => {
+        if (!Object.prototype.hasOwnProperty.call(values, ph.name)) {
+          values[ph.name] = '';
+        }
+      });
+
+      return {
+        placeholders: parsed.placeholders,
+        values,
+        xml: template.xml,
+      };
+    },
+    []
+  );
 
   // Memoized stanzaListener to avoid duplicate subscriptions
   const stanzaListener = React.useCallback((accountId: string, stanza: string) => {
@@ -235,9 +269,23 @@ const App: FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedAccount || !message) return;
+    if (!selectedAccount) return;
+
+    let xmlToSend = message;
+
+    if (currentTemplate) {
+      const resolved = resolvePlaceholders(currentTemplate.xml, templateValues, { autoGenerate: true });
+      xmlToSend = resolved.xml;
+    } else if (message) {
+      // Best-effort resolution for ad-hoc stanzas with placeholder tokens
+      const resolved = resolvePlaceholders(message, templateValues, { autoGenerate: true });
+      xmlToSend = resolved.xml;
+    }
+
+    if (!xmlToSend) return;
+
     // @ts-ignore
-    const result = await window.electron?.invoke('send-stanza', selectedAccount, message);
+    const result = await window.electron?.invoke('send-stanza', selectedAccount, xmlToSend);
     if (result?.success) {
       setSendStatus('Message sent!');
       toast.success('Stanza sent successfully');
@@ -249,50 +297,67 @@ const App: FC = () => {
   };
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
+    const text = e.target.value;
+    setMessage(text);
+
+    const parsed = parsePlaceholders(text);
+    setActivePlaceholders(parsed.placeholders);
+
+    setTemplateValues(prev => {
+      const next = { ...prev } as Record<string, string>;
+      parsed.placeholders.forEach(ph => {
+        if (!(ph.name in next)) {
+          next[ph.name] = '';
+        }
+      });
+      // Remove values for placeholders no longer present
+      Object.keys(next).forEach(key => {
+        if (!parsed.placeholders.some(ph => ph.name === key)) {
+          delete next[key];
+        }
+      });
+      return next;
+    });
   };
 
   const handleTemplateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    if (!value) return;
+    if (!value) {
+      setCurrentTemplate(null);
+      setTemplateValues({});
+      setActivePlaceholders([]);
+      setMessage('');
+      return;
+    }
 
-    // Check standard templates
     const template = STANZA_TEMPLATES.find(t => t.name === value);
 
     if (template) {
       setCurrentTemplate(template);
+      setMessage(template.xml);
 
-      // Initialize values
+      const parsed = parsePlaceholders(template.xml);
+      setActivePlaceholders(parsed.placeholders);
+
       const initialValues: Record<string, string> = {};
-      template.fields.forEach(f => {
-        initialValues[f.key] = f.defaultValue || '';
+      parsed.placeholders.forEach(ph => {
+        if (!(ph.name in initialValues)) initialValues[ph.name] = '';
       });
-
       setTemplateValues(initialValues);
-
-      // Generate initial XML
-      let xml = template.xml;
-      Object.entries(initialValues).forEach(([key, val]) => {
-        xml = xml.replace(new RegExp(`{{${key}}}`, 'g'), val);
-      });
-      setMessage(xml);
 
       toast.success(`Loaded template: ${template.name}`);
     } else {
       setCurrentTemplate(null);
       setTemplateValues({});
+      setActivePlaceholders([]);
     }
   };
 
   const handleLoadSavedTemplate = (template: SavedTemplate) => {
+    const { placeholders, values, xml } = buildTemplateState(template, template.values);
     setCurrentTemplate(template);
-    setTemplateValues({ ...template.values });
-
-    // Generate XML from saved values
-    let xml = template.xml;
-    Object.entries(template.values).forEach(([key, val]) => {
-      xml = xml.replace(new RegExp(`{{${key}}}`, 'g'), val);
-    });
+    setTemplateValues(values);
+    setActivePlaceholders(placeholders);
     setMessage(xml);
     toast.success(`Loaded saved template: ${template.name}`);
   };
@@ -335,6 +400,7 @@ const App: FC = () => {
       if ((currentTemplate as any)?.id === templateId) {
         setCurrentTemplate(null);
         setTemplateValues({});
+        setActivePlaceholders([]);
         setMessage('');
       }
       toast.success('Template deleted');
@@ -347,13 +413,7 @@ const App: FC = () => {
     const newValues = { ...templateValues, [key]: value };
     setTemplateValues(newValues);
 
-    if (currentTemplate) {
-      let xml = currentTemplate.xml;
-      Object.entries(newValues).forEach(([k, v]) => {
-        xml = xml.replace(new RegExp(`{{${k}}}`, 'g'), v);
-      });
-      setMessage(xml);
-    }
+    // Keep the editor showing placeholders; resolution happens at send time.
   };
 
   const getStatusColor = (status: string) => {
@@ -567,23 +627,44 @@ const App: FC = () => {
                 </div>
               </div>
 
-              {currentTemplate && currentTemplate.fields.length > 0 && (
+              {activePlaceholders.length > 0 && (
                 <div className="template-fields" style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Template Parameters</div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                    {currentTemplate.fields.map(field => (
-                      <div key={field.key}>
-                        <label style={{ display: 'block', fontSize: '0.7rem', marginBottom: '0.25rem', color: 'var(--text-secondary)' }}>{field.label}</label>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
-                          placeholder={field.placeholder}
-                          value={templateValues[field.key] || ''}
-                          onChange={(e) => handleTemplateValueChange(field.key, e.target.value)}
-                        />
-                      </div>
-                    ))}
+                    {activePlaceholders.map(ph => {
+                      const meta = templateFieldMap.get(ph.name) || templateFieldMap.get(ph.name.replace(/^\$/, ''));
+                      const label = meta?.label || ph.name.replace(/^\$/, '');
+                      const isTimestamp = ph.type === 'timestamp';
+                      const isId = ph.type === 'id';
+                      const placeholderText = meta?.placeholder || (isTimestamp ? 'auto-generated' : '');
+
+                      return (
+                        <div key={`${ph.name}-${ph.startIndex}`}>
+                          <label style={{ display: 'block', fontSize: '0.7rem', marginBottom: '0.25rem', color: 'var(--text-secondary)' }}>
+                            {label}{isTimestamp ? ' (auto)' : ''}
+                          </label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
+                            placeholder={placeholderText}
+                            value={templateValues[ph.name] || ''}
+                            onChange={(e) => handleTemplateValueChange(ph.name, e.target.value)}
+                            disabled={isTimestamp}
+                          />
+                          {isTimestamp && (
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                              Auto-generated; copy if you need to reference it elsewhere.
+                            </div>
+                          )}
+                          {isId && (
+                            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                              Tip: enter <code>${'{'}id-label{'}'}</code> to auto-generate and track by label.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

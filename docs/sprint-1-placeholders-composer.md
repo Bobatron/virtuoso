@@ -6,10 +6,10 @@ Implement the template placeholder system and core Composer functionality, enabl
 
 ## 📋 Success Criteria
 
-- [ ] Templates support `{{placeholder}}` syntax
-- [ ] Placeholders automatically generate input fields in UI
-- [ ] `{{$id}}` generates unique IDs and displays them
-- [ ] Performance data model implemented
+- [x] Templates support `{{placeholder}}` syntax
+- [x] Placeholders automatically generate input fields in UI
+- [x] `{{$id}}` generates unique IDs and displays them
+- [x] Performance data model implemented (types scaffolded)
 - [ ] Composer captures connect/disconnect/send actions
 - [ ] Basic sequential playback works
 - [ ] Performances saved to JSON files
@@ -33,12 +33,12 @@ Implement the template placeholder system and core Composer functionality, enabl
 Add TypeScript interfaces for Performances, Stanzas, Movements, and related types.
 
 **Tasks:**
-- [ ] Create `src/types/performance.ts`
-- [ ] Add Performance interface
-- [ ] Add Stanza interface with all types
-- [ ] Add Movement interface
-- [ ] Add PlaybackResult interfaces
-- [ ] Export from `src/types/index.ts`
+- [x] Create `src/types/performance.ts`
+- [x] Add Performance interface
+- [x] Add Stanza interface with all types
+- [x] Add Movement interface
+- [x] Add PlaybackResult interfaces
+- [x] Export from `src/types/index.ts`
 
 **New File - `src/types/performance.ts`:**
 ```typescript
@@ -188,10 +188,10 @@ export interface AssertionResult {
 Add TypeScript interfaces for the placeholder system.
 
 **Tasks:**
-- [ ] Create `src/types/placeholder.ts`
-- [ ] Add Placeholder interface
-- [ ] Add parsed placeholder types
-- [ ] Export from `src/types/index.ts`
+- [x] Create `src/types/placeholder.ts`
+- [x] Add Placeholder interface
+- [x] Add parsed placeholder types
+- [x] Export from `src/types/index.ts`
 
 **New File - `src/types/placeholder.ts`:**
 ```typescript
@@ -238,11 +238,14 @@ export interface ResolvedTemplate {
 Create a utility module to parse and resolve placeholders in templates.
 
 **Tasks:**
-- [ ] Create `src/main/placeholderParser.ts`
-- [ ] Implement `parsePlaceholders()` function
-- [ ] Implement `resolvePlaceholders()` function
-- [ ] Implement `generateUniqueId()` function
-- [ ] Add unit tests
+- [x] Create `src/main/placeholderParser.ts`
+- [x] Implement `parsePlaceholders()` function
+- [x] Implement `resolvePlaceholders()` function
+- [x] Implement `generateUniqueId()` function
+- [x] Add unit tests
+
+**Notes:**
+- User-entered values can request an auto-generated, labelled ID using the pattern `${id-label}`; the resolver generates an ID, stores it under `label`, and replaces the placeholder with that value for later assertions/correlation.
 
 **New File - `src/main/placeholderParser.ts`:**
 ```typescript
