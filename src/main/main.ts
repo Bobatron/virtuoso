@@ -8,8 +8,17 @@ import path from 'path';
 import { XMPPManager } from './xmppManager';
 import { loadAccounts } from './accountStore';
 import { loadTemplates, saveTemplate, deleteTemplate } from './templateStore';
+import {
+  loadPerformances,
+  getPerformance,
+  addPerformance,
+  deletePerformance,
+  exportPerformance,
+  importPerformance,
+} from './performanceStore';
 import type { AccountData } from '../types/account';
 import type { Template } from '../types/template';
+import type { Performance } from '../types/performance';
 import type { IpcResponse } from '../types/ipc';
 
 const xmppManager = new XMPPManager();
@@ -210,6 +219,38 @@ ipcMain.handle('delete-template', (event, templateId: string): IpcResponse => {
     const error = err as Error;
     return { success: false, error: error.message };
   }
+});
+
+// Performance Management IPC
+ipcMain.handle('load-performances', async (): Promise<Performance[]> => {
+  return loadPerformances();
+});
+
+ipcMain.handle('get-performance', async (_event, performanceId: string): Promise<Performance | null> => {
+  return getPerformance(performanceId);
+});
+
+ipcMain.handle('save-performance', async (_event, performance: Performance): Promise<{ success: boolean }> => {
+  addPerformance(performance);
+  return { success: true };
+});
+
+ipcMain.handle('delete-performance', async (_event, performanceId: string): Promise<{ success: boolean }> => {
+  deletePerformance(performanceId);
+  return { success: true };
+});
+
+ipcMain.handle('export-performance', async (_event, performanceId: string, filePath: string): Promise<{ success: boolean }> => {
+  const success = exportPerformance(performanceId, filePath);
+  return { success };
+});
+
+ipcMain.handle('import-performance', async (
+  _event,
+  filePath: string
+): Promise<{ success: boolean; performance?: Performance }> => {
+  const performance = importPerformance(filePath);
+  return performance ? { success: true, performance } : { success: false };
 });
 
 app.whenReady().then(() => {

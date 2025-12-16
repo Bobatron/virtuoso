@@ -28,6 +28,13 @@ const electronAPI: ElectronAPI = {
       listenerMap.delete(listener);
     }
   },
+  loadPerformances: () => ipcRenderer.invoke('load-performances'),
+  getPerformance: (performanceId: string) => ipcRenderer.invoke('get-performance', performanceId),
+  savePerformance: (performance: unknown) => ipcRenderer.invoke('save-performance', performance),
+  deletePerformance: (performanceId: string) => ipcRenderer.invoke('delete-performance', performanceId),
+  exportPerformance: (performanceId: string, filePath: string) =>
+    ipcRenderer.invoke('export-performance', performanceId, filePath),
+  importPerformance: (filePath: string) => ipcRenderer.invoke('import-performance', filePath),
 };
 
 contextBridge.exposeInMainWorld('electron', electronAPI);

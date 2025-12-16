@@ -429,137 +429,26 @@ export function validatePlaceholders(
 Create a React component that automatically renders input fields for each placeholder found in a template.
 
 **Tasks:**
-- [ ] Create `src/renderer/components/PlaceholderFields.tsx`
-- [ ] Parse template to find placeholders
-- [ ] Render input field for each user placeholder
-- [ ] Show read-only field for `{{$id}}` with generated value
-- [ ] Handle value changes
-- [ ] Style inputs consistently
+- [x] Create placeholder field rendering (implemented inline in `App.tsx` instead of a separate component)
+- [x] Parse template text to find placeholders (single-brace supported)
+- [x] Render input field for each user placeholder
+- [x] Show guidance for auto-generated IDs via `${id-label}` tokens
+- [x] Handle value changes
+- [x] Style inputs consistently (reusing existing form styles)
 
 **New File - `src/renderer/components/PlaceholderFields.tsx`:**
 ```tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Placeholder, PlaceholderValues } from '../../types/placeholder';
 
-interface PlaceholderFieldsProps {
-  template: string;
-  values: PlaceholderValues;
-  onChange: (values: PlaceholderValues) => void;
-  generatedIds?: Record<string, string>;
-}
+**Notes on implementation:**
+- Implemented directly inside `App.tsx` using the shared parser; supports `{placeholder}` and `${id-label}` alias tokens for any field.
+- Reuses existing form styles; no separate component/CSS file was added.
 
-// Client-side placeholder parsing (simplified version)
-function parsePlaceholdersClient(template: string): Placeholder[] {
-  const placeholders: Placeholder[] = [];
-  const regex = /\{\{([^}]+)\}\}/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(template)) !== null) {
-    const name = match[1].trim();
-    let type: Placeholder['type'] = 'user';
-    
-    if (name.startsWith('$id')) {
-      type = 'id';
-    } else if (name === '$timestamp') {
-      type = 'timestamp';
-    } else if (name === name.toUpperCase() && /^[A-Z_]+$/.test(name)) {
-      type = 'env';
-    }
-
-    // Only add if not already in list (deduplicate)
-    if (!placeholders.some(p => p.name === name)) {
-      placeholders.push({
-        name,
-        fullMatch: match[0],
-        type,
-        startIndex: match.index,
-        endIndex: match.index + match[0].length,
-      });
-    }
-  }
-
-  return placeholders;
-}
-
-export function PlaceholderFields({ 
-  template, 
-  values, 
-  onChange,
-  generatedIds = {}
-}: PlaceholderFieldsProps): JSX.Element | null {
-  const placeholders = useMemo(
-    () => parsePlaceholdersClient(template),
-    [template]
-  );
-
-  // Filter to only show user-input placeholders and auto-generated IDs
-  const visiblePlaceholders = placeholders.filter(
-    p => p.type === 'user' || p.type === 'id'
-  );
-
-  if (visiblePlaceholders.length === 0) {
-    return null;
-  }
-
-  const handleChange = (name: string, value: string): void => {
-    onChange({ ...values, [name]: value });
-  };
-
-  return (
-    <div className="placeholder-fields">
-      <div className="placeholder-fields-header">
-        <span className="placeholder-fields-title">Template Variables</span>
-      </div>
-      <div className="placeholder-fields-list">
-        {visiblePlaceholders.map((placeholder) => (
-          <div key={placeholder.name} className="placeholder-field">
-            <label htmlFor={`placeholder-${placeholder.name}`}>
-              {placeholder.name.replace(/^\$/, '')}
-              {placeholder.type === 'id' && (
-                <span className="placeholder-auto-badge">auto</span>
-              )}
-            </label>
-            {placeholder.type === 'id' ? (
-              <input
-                id={`placeholder-${placeholder.name}`}
-                type="text"
-                value={generatedIds[placeholder.name] || '(will be generated)'}
-                readOnly
-                className="placeholder-input placeholder-input-readonly"
-              />
-            ) : (
-              <input
-                id={`placeholder-${placeholder.name}`}
-                type="text"
-                value={values[placeholder.name] || ''}
-                onChange={(e) => handleChange(placeholder.name, e.target.value)}
-                placeholder={`Enter ${placeholder.name}`}
-                className="placeholder-input"
-              />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-```
-
-**New CSS - Add to `src/renderer/styles/placeholder-fields.css`:**
-```css
-.placeholder-fields {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.placeholder-fields-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
+**Verification:**
+- Placeholder-driven inputs render for placeholders in the stanza text.
+- Alias tokens `${id-label}` are hinted and resolve to generated IDs at send time.
+- Values update correctly; duplicate placeholders are de-duplicated in the parameter list.
 
 .placeholder-fields-title {
   font-size: 12px;
@@ -638,54 +527,23 @@ export function PlaceholderFields({
 Integrate the PlaceholderFields component into the existing stanza editor in App.tsx.
 
 **Tasks:**
-- [ ] Import PlaceholderFields component
-- [ ] Add placeholder values state
-- [ ] Show PlaceholderFields above stanza textarea when template has placeholders
-- [ ] Resolve placeholders before sending stanza
-- [ ] Track generated IDs for response correlation
+- [x] Import and render placeholder fields (implemented inline in `App.tsx`)
+- [x] Add placeholder values state
+- [x] Show placeholder inputs above the stanza textarea when text contains placeholders
+- [x] Resolve placeholders before sending stanza (supports `{}` and `${id-label}`)
+- [x] Track generated IDs for response correlation
 
 **Files to Modify:**
 - `src/renderer/App.tsx`
 
-**Changes:**
-```tsx
-// Add imports
-import { PlaceholderFields } from './components/PlaceholderFields';
-import type { PlaceholderValues } from '../types/placeholder';
-
-// Add state
-const [placeholderValues, setPlaceholderValues] = useState<PlaceholderValues>({});
-const [generatedIds, setGeneratedIds] = useState<Record<string, string>>({});
-
-// In the stanza editor section, add PlaceholderFields above textarea
-{selectedTemplate && (
-  <PlaceholderFields
-    template={stanzaXml}
-    values={placeholderValues}
-    onChange={setPlaceholderValues}
-    generatedIds={generatedIds}
-  />
-)}
-
-// When sending stanza, resolve placeholders first
-const handleSendStanza = async () => {
-  // Resolve placeholders before sending
-  const { xml: resolvedXml, generatedIds: newIds } = resolvePlaceholders(
-    stanzaXml,
-    placeholderValues,
-    true // auto-generate IDs
-  );
-  
-  setGeneratedIds(prev => ({ ...prev, ...newIds }));
-  
-  await window.virtuoso.sendStanza(selectedAccountId, resolvedXml);
-};
-```
+**Notes on implementation:**
+- Implemented within `App.tsx` (no separate component), using the shared placeholder parser.
+- Inputs render whenever the stanza text contains placeholders; works for both loaded templates and freeform text.
+- Resolution happens at send time; `${id-label}` is honored for any field and tracked for later correlation.
 
 **Verification:**
-- Placeholder fields appear when template has `{{placeholders}}`
-- Values are correctly substituted when sending
-- Generated IDs are tracked for later use
+- Placeholder inputs appear for `{placeholders}` in the editor.
+- Values substitute correctly on send; alias-generated IDs are stored.
 
 ---
 
@@ -697,10 +555,10 @@ const handleSendStanza = async () => {
 Create a storage module for Performances, similar to accountStore and templateStore.
 
 **Tasks:**
-- [ ] Create `src/main/performanceStore.ts`
-- [ ] Implement CRUD operations
-- [ ] Save to `performances.json` file
-- [ ] Add IPC handlers in main.ts
+- [x] Create `src/main/performanceStore.ts`
+- [x] Implement CRUD operations
+- [x] Save to `performances.json` file
+- [x] Add IPC handlers in main.ts
 
 **New File - `src/main/performanceStore.ts`:**
 ```typescript
@@ -857,6 +715,9 @@ importPerformance: (filePath: string) => ipcRenderer.invoke('import-performance'
 - Can delete a Performance
 - Can export to file
 - Can import from file
+
+**Notes:**
+- Backend + IPC implemented and covered by unit tests (`src/main/__tests__/performanceStore.test.ts`); renderer/UI wiring is not yet implemented, so the feature is not exposed in the app.
 
 ---
 
