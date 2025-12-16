@@ -1,9 +1,9 @@
 import {
   composerReducer,
   initialComposerState,
-  buildPerformanceFromState,
+  buildCompositionFromState,
   generateStanzaId,
-  generatePerformanceId,
+  generateCompositionId,
 } from '../useComposer';
 import type { ComposerState } from '../useComposer';
 
@@ -56,12 +56,12 @@ describe('composerReducer', () => {
   });
 });
 
-describe('buildPerformanceFromState', () => {
+describe('buildCompositionFromState', () => {
   it('returns null when not composing or no stanzas', () => {
-    expect(buildPerformanceFromState(initialComposerState)).toBeNull();
+    expect(buildCompositionFromState(initialComposerState)).toBeNull();
   });
 
-  it('builds a performance with ids and accounts', () => {
+  it('builds a composition with ids and accounts', () => {
     const state: ComposerState = {
       isComposing: true,
       startTime: Date.now(),
@@ -79,12 +79,12 @@ describe('buildPerformanceFromState', () => {
       ]),
     };
 
-    const perf = buildPerformanceFromState(state);
-    expect(perf).not.toBeNull();
-    expect(perf?.id.startsWith('perf_')).toBe(true);
-    expect(perf?.stanzas).toHaveLength(1);
-    expect(perf?.accounts[0]?.alias).toBe('alice');
-    expect(perf?.version).toBe('1.0.0');
+    const comp = buildCompositionFromState(state);
+    expect(comp).not.toBeNull();
+    expect(comp?.id.startsWith('comp_')).toBe(true);
+    expect(comp?.stanzas).toHaveLength(1);
+    expect(comp?.accounts[0]?.alias).toBe('alice');
+    expect(comp?.version).toBe('1.0.0');
   });
 });
 
@@ -94,8 +94,8 @@ describe('id generators', () => {
     const id2 = generateStanzaId();
     expect(id1).not.toBe(id2);
 
-    const perf1 = generatePerformanceId();
-    const perf2 = generatePerformanceId();
-    expect(perf1).not.toBe(perf2);
+    const comp1 = generateCompositionId();
+    const comp2 = generateCompositionId();
+    expect(comp1).not.toBe(comp2);
   });
 });

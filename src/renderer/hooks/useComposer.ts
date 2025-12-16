@@ -1,5 +1,5 @@
 import { useReducer, useCallback } from 'react';
-import type { Performance, Stanza, AccountReference } from '../../types/performance';
+import type { Composition, Stanza, AccountReference } from '../../types/composition';
 
 interface ComposerState {
   isComposing: boolean;
@@ -29,8 +29,8 @@ export function generateStanzaId(): string {
   return `stanza_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 
-export function generatePerformanceId(): string {
-  return `perf_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+export function generateCompositionId(): string {
+  return `comp_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 
 export function composerReducer(state: ComposerState, action: ComposerAction): ComposerState {
@@ -72,15 +72,15 @@ function buildAccount(alias: string, jid?: string): AccountReference {
   return { alias, jid: jid || alias };
 }
 
-export function buildPerformanceFromState(state: ComposerState): Performance | null {
+export function buildCompositionFromState(state: ComposerState): Composition | null {
   if (!state.isComposing || state.stanzas.length === 0) {
     return null;
   }
 
   const now = new Date().toISOString();
   return {
-    id: generatePerformanceId(),
-    name: 'New Performance',
+    id: generateCompositionId(),
+    name: 'New Composition',
     description: '',
     version: '1.0.0',
     created: now,
@@ -173,10 +173,10 @@ export function useComposer() {
     dispatch({ type: 'ADD_STANZA', stanza, account: buildAccount(accountAlias) });
   }, []);
 
-  const stopComposing = useCallback((): Performance | null => {
-    const performance = buildPerformanceFromState(state);
+  const stopComposing = useCallback((): Composition | null => {
+    const composition = buildCompositionFromState(state);
     dispatch({ type: 'RESET' });
-    return performance;
+    return composition;
   }, [state]);
 
   return {

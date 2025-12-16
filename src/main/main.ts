@@ -9,16 +9,17 @@ import { XMPPManager } from './xmppManager';
 import { loadAccounts } from './accountStore';
 import { loadTemplates, saveTemplate, deleteTemplate } from './templateStore';
 import {
-  loadPerformances,
-  getPerformance,
-  addPerformance,
-  deletePerformance,
-  exportPerformance,
-  importPerformance,
-} from './performanceStore';
+  loadCompositions,
+  getComposition,
+  addComposition,
+  deleteComposition,
+  exportComposition,
+  importComposition,
+  setCompositionsFile,
+} from './compositionStore';
 import type { AccountData } from '../types/account';
 import type { Template } from '../types/template';
-import type { Performance } from '../types/performance';
+import type { Composition } from '../types/composition';
 import type { IpcResponse } from '../types/ipc';
 
 const xmppManager = new XMPPManager();
@@ -221,39 +222,43 @@ ipcMain.handle('delete-template', (event, templateId: string): IpcResponse => {
   }
 });
 
-// Performance Management IPC
-ipcMain.handle('load-performances', async (): Promise<Performance[]> => {
-  return loadPerformances();
+// Composition Management IPC
+ipcMain.handle('load-compositions', async (): Promise<Composition[]> => {
+  return loadCompositions();
 });
 
-ipcMain.handle('get-performance', async (_event, performanceId: string): Promise<Performance | null> => {
-  return getPerformance(performanceId);
+ipcMain.handle('get-composition', async (_event, compositionId: string): Promise<Composition | null> => {
+  return getComposition(compositionId);
 });
 
-ipcMain.handle('save-performance', async (_event, performance: Performance): Promise<{ success: boolean }> => {
-  addPerformance(performance);
+ipcMain.handle('save-composition', async (_event, composition: Composition): Promise<{ success: boolean }> => {
+  console.log('[IPC] save-composition received', composition?.id, composition?.name);
+  addComposition(composition);
   return { success: true };
 });
 
-ipcMain.handle('delete-performance', async (_event, performanceId: string): Promise<{ success: boolean }> => {
-  deletePerformance(performanceId);
+ipcMain.handle('delete-composition', async (_event, compositionId: string): Promise<{ success: boolean }> => {
+  deleteComposition(compositionId);
   return { success: true };
 });
 
-ipcMain.handle('export-performance', async (_event, performanceId: string, filePath: string): Promise<{ success: boolean }> => {
-  const success = exportPerformance(performanceId, filePath);
+ipcMain.handle('export-composition', async (_event, compositionId: string, filePath: string): Promise<{ success: boolean }> => {
+  const success = exportComposition(compositionId, filePath);
   return { success };
 });
 
-ipcMain.handle('import-performance', async (
+ipcMain.handle('import-composition', async (
   _event,
   filePath: string
-): Promise<{ success: boolean; performance?: Performance }> => {
-  const performance = importPerformance(filePath);
-  return performance ? { success: true, performance } : { success: false };
+): Promise<{ success: boolean; composition?: Composition }> => {
+  const composition = importComposition(filePath);
+  return composition ? { success: true, composition } : { success: false };
 });
 
 app.whenReady().then(() => {
+  const compositionsPath = path.join(app.getPath('userData'), 'compositions.json');
+  setCompositionsFile(compositionsPath);
+
   // Load saved accounts and add to manager
   const savedAccounts = loadAccounts();
   for (const [id, data] of Object.entries(savedAccounts)) {

@@ -4,7 +4,7 @@
 
 import type { AccountData } from './account';
 import type { Template } from './template';
-import type { Performance } from './performance';
+import type { Composition } from './composition';
 
 export interface IpcResponse<T = void> {
   success: boolean;
@@ -17,14 +17,14 @@ export interface ElectronAPI {
   on: (channel: string, callback: (...args: any[]) => void) => void;
   send: (channel: string, ...args: any[]) => void;
   off: (channel: string, listener: (...args: any[]) => void) => void;
-  loadPerformances?: () => Promise<Performance[]>;
-  getPerformance?: (performanceId: string) => Promise<Performance | null>;
-  savePerformance?: (performance: Performance) => Promise<{ success: boolean }>;
-  deletePerformance?: (performanceId: string) => Promise<{ success: boolean }>;
-  exportPerformance?: (performanceId: string, filePath: string) => Promise<{ success: boolean }>;
-  importPerformance?: (
+  loadCompositions?: () => Promise<Composition[]>;
+  getComposition?: (compositionId: string) => Promise<Composition | null>;
+  saveComposition?: (composition: Composition) => Promise<{ success: boolean }>;
+  deleteComposition?: (compositionId: string) => Promise<{ success: boolean }>;
+  exportComposition?: (compositionId: string, filePath: string) => Promise<{ success: boolean }>;
+  importComposition?: (
     filePath: string
-  ) => Promise<{ success: boolean; performance?: Performance | undefined }>;
+  ) => Promise<{ success: boolean; composition?: Composition | undefined }>;
 }
 
 // Main process to renderer IPC channels
@@ -44,12 +44,12 @@ export type RendererToMainChannels =
   | 'get-templates'
   | 'save-template'
   | 'delete-template'
-  | 'load-performances'
-  | 'get-performance'
-  | 'save-performance'
-  | 'delete-performance'
-  | 'export-performance'
-  | 'import-performance';
+  | 'load-compositions'
+  | 'get-composition'
+  | 'save-composition'
+  | 'delete-composition'
+  | 'export-composition'
+  | 'import-composition';
 
 declare global {
     interface Window {

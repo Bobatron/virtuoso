@@ -5,6 +5,14 @@
     overflow: hidden;
 }
 
+.main-pane {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-tertiary);
+}
+
 /* Sidebar */
 .sidebar {
     width: 220px;
@@ -409,4 +417,278 @@
 .empty-state-text {
     font-size: var(--font-size-md);
     color: var(--text-secondary);
+}
+
+/* Compositions Sidebar (formerly Performances) */
+.compositions-sidebar,
+.performances-sidebar {
+    width: 320px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-light);
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    overflow-y: auto;
+}
+
+.compositions-header,
+.performances-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+}
+
+.compositions-header h3,
+.performances-header h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+}
+
+.compose-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    background: var(--primary-main);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    cursor: pointer;
+    font-weight: var(--font-weight-semibold);
+    transition: all var(--transition-fast);
+}
+
+.compose-button:hover {
+    background: var(--primary-dark);
+    box-shadow: var(--shadow-md);
+}
+
+.recording-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    background: rgba(255, 59, 48, 0.12);
+    color: #ff3b30;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm);
+}
+
+.recording-dot {
+    color: #ff3b30;
+    font-size: 0.9rem;
+}
+
+.composition-list,
+.performance-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.composition-list.loading,
+.composition-list.empty,
+.performance-list.loading,
+.performance-list.empty {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    color: var(--text-secondary);
+}
+
+.empty-title {
+    margin: 0 0 4px 0;
+    font-weight: var(--font-weight-semibold);
+}
+
+.empty-hint {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.composition-item,
+.performance-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+}
+
+.composition-item-info,
+.performance-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.composition-name,
+.performance-name {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.composition-meta,
+.performance-meta {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.composition-item-actions,
+.performance-item-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    background: var(--bg-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: var(--text-primary);
+}
+
+.btn-icon:hover {
+    background: var(--bg-hover);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-icon.danger {
+    color: var(--status-error);
+    border-color: rgba(220, 38, 38, 0.25);
+}
+
+.composer-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+}
+
+.composer-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.composer-stanzas {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.stanza-item {
+    display: grid;
+    grid-template-columns: 24px 24px 1fr;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: 6px 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+}
+
+.stanza-index {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.stanza-emoji {
+    text-align: center;
+    font-size: 1rem;
+}
+
+.stanza-description {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.composer-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+}
+
+.btn-primary,
+.btn-secondary {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    cursor: pointer;
+    font-weight: var(--font-weight-semibold);
+    transition: all var(--transition-fast);
+}
+
+.btn-primary {
+    background: var(--primary-main);
+    color: white;
+    border-color: var(--primary-main);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--primary-dark);
+}
+
+.btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.composer-empty {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.composer-empty .hint {
+    margin: 4px 0 0 0;
+    font-size: 0.75rem;
+}
+
+.composition-actions-hint,
+.performance-actions-hint {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-xs);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.hint-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
