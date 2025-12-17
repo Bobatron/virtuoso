@@ -174,6 +174,9 @@ export function CompositionsSidebar({
             <CompositionList
               compositions={compositions}
               loading={loading}
+              onPlay={onPlay}
+              onEdit={onEdit}
+              onDelete={onDelete}
               onView={handleViewComposition}
             />
           )}

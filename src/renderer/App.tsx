@@ -81,6 +81,7 @@ const App: FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveName, setSaveName] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<{ id: string; name: string } | null>(null);
   const [showCompositionModal, setShowCompositionModal] = useState(false);
   const [compositionName, setCompositionName] = useState('');
   const [pendingComposition, setPendingComposition] = useState<Composition | null>(null);
@@ -468,7 +469,13 @@ const App: FC = () => {
 
   const handleDeleteTemplate = async (templateId: string, templateName: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent loading the template when clicking delete
-    if (!confirm(`Delete template "${templateName}"?`)) return;
+    setTemplateToDelete({ id: templateId, name: templateName });
+  };
+
+  const confirmDeleteTemplate = async () => {
+    if (!templateToDelete) return;
+    const { id: templateId } = templateToDelete;
+    setTemplateToDelete(null);
 
     // @ts-ignore
     const result = await window.electron?.invoke('delete-template', templateId);
@@ -1374,6 +1381,21 @@ const App: FC = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button onClick={cancelDelete} className="clear-btn">Cancel</button>
               <button onClick={confirmDelete} className="delete-account-btn">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {templateToDelete && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="modal-content" style={{ background: 'var(--bg-primary)', padding: '1.5rem', borderRadius: 'var(--radius-md)', width: '320px', boxShadow: 'var(--shadow-lg)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Delete Template?</h3>
+            <p style={{ marginTop: 0, marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              Are you sure you want to delete the template "{templateToDelete.name}"?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button onClick={() => setTemplateToDelete(null)} className="clear-btn">Cancel</button>
+              <button onClick={confirmDeleteTemplate} className="delete-account-btn">Delete</button>
             </div>
           </div>
         </div>

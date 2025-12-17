@@ -1,1 +1,0 @@
-- Saved template delete button uses a system prompt
