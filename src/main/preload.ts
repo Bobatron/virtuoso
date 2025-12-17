@@ -28,6 +28,13 @@ const electronAPI: ElectronAPI = {
       listenerMap.delete(listener);
     }
   },
+  loadCompositions: () => ipcRenderer.invoke('load-compositions'),
+  getComposition: (compositionId: string) => ipcRenderer.invoke('get-composition', compositionId),
+  saveComposition: (composition: unknown) => ipcRenderer.invoke('save-composition', composition),
+  deleteComposition: (compositionId: string) => ipcRenderer.invoke('delete-composition', compositionId),
+  exportComposition: (compositionId: string, filePath: string) =>
+    ipcRenderer.invoke('export-composition', compositionId, filePath),
+  importComposition: (filePath: string) => ipcRenderer.invoke('import-composition', filePath),
 };
 
 contextBridge.exposeInMainWorld('electron', electronAPI);

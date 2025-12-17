@@ -2,18 +2,37 @@
 
 ## 🎯 Sprint Goal
 
-Implement the template placeholder system and core Composer functionality, enabling users to create and play back basic Performances.
+Implement the template placeholder system and core Composer functionality, enabling users to create and play back basic Compositions.
 
 ## 📋 Success Criteria
 
-- [ ] Templates support `{{placeholder}}` syntax
-- [ ] Placeholders automatically generate input fields in UI
-- [ ] `{{$id}}` generates unique IDs and displays them
-- [ ] Performance data model implemented
-- [ ] Composer captures connect/disconnect/send actions
-- [ ] Basic sequential playback works
-- [ ] Performances saved to JSON files
-- [ ] Right sidebar shows Performances list
+- [x] Templates support `{{placeholder}}` syntax
+- [x] Placeholders automatically generate input fields in UI
+- [x] `{{$id}}` generates unique IDs and displays them
+- [x] Composition data model implemented (types scaffolded)
+- [x] Composer captures connect/disconnect/send actions
+- [x] Basic sequential playback works (Conductor performs compositions via real XMPP)
+- [x] Compositions saved to JSON files (Electron) or local fallback (dev)
+- [x] Right sidebar shows Compositions list
+
+## 🚦 Sprint Update (progress & deviations)
+- **Terminology Change**: Renamed "Performance" to "Composition" for saved scripts. "Performance" now refers to the result of Conducting a Composition.
+- Implemented compositions sidebar UI with add/delete/edit flows; save now uses an in-app modal (no system prompts).
+- Composer captures connect/disconnect/send actions and saves compositions to Electron JSON store; when running Vite-only dev, falls back to localStorage to avoid data loss.
+- Added edit modal for composition name/description; delete works.
+- Plan change: removed system dialogs (prompt/confirm) in favor of React modals to prevent Electron focus issues.
+- **Composer Tab Features (completed)**:
+  - View compositions in list, click to view details
+  - Load stanzas from composition into main UI
+  - Remove individual stanzas from compositions
+  - Record onto existing compositions ("Record More")
+  - Reorder stanzas with up/down buttons
+  - Import compositions from JSON files
+- **Conductor Tab Features (completed)**:
+  - Perform compositions with real XMPP execution (connect, send stanzas, disconnect)
+  - Export compositions as JSON files
+  - View performance results with pass/fail status, timing, and error details
+  - Performances tab shows history of all executed compositions
 
 ## 📦 Prerequisites
 
@@ -25,24 +44,24 @@ Implement the template placeholder system and core Composer functionality, enabl
 
 ## 🔨 Work Items
 
-### 1. Create Performance Type Definitions
+### 1. Create Composition Type Definitions
 **Priority:** 🔴 CRITICAL  
 **Estimate:** 2-3 hours
 
 **Description:**  
-Add TypeScript interfaces for Performances, Stanzas, Movements, and related types.
+Add TypeScript interfaces for Compositions, Stanzas, Movements, and related types.
 
 **Tasks:**
-- [ ] Create `src/types/performance.ts`
-- [ ] Add Performance interface
-- [ ] Add Stanza interface with all types
-- [ ] Add Movement interface
-- [ ] Add PlaybackResult interfaces
-- [ ] Export from `src/types/index.ts`
+- [x] Create `src/types/composition.ts`
+- [x] Add Composition interface
+- [x] Add Stanza interface with all types
+- [x] Add Movement interface
+- [x] Add PlaybackResult interfaces
+- [x] Export from `src/types/index.ts`
 
-**New File - `src/types/performance.ts`:**
+**New File - `src/types/composition.ts`:**
 ```typescript
-export interface Performance {
+export interface Composition {
   id: string;
   name: string;
   description: string;
@@ -59,7 +78,7 @@ export interface Performance {
   // Optional: Movements for logical grouping
   movements?: Movement[];
   
-  // Performance-level variables
+  // Composition-level variables
   variables: Record<string, string>;
   
   // Metadata
@@ -138,7 +157,7 @@ export interface Assertion {
 
 // Playback results
 export interface PlaybackResult {
-  performanceId: string;
+  compositionId: string;
   status: 'passed' | 'failed' | 'error' | 'stopped';
   startTime: string;
   endTime: string;
@@ -188,10 +207,10 @@ export interface AssertionResult {
 Add TypeScript interfaces for the placeholder system.
 
 **Tasks:**
-- [ ] Create `src/types/placeholder.ts`
-- [ ] Add Placeholder interface
-- [ ] Add parsed placeholder types
-- [ ] Export from `src/types/index.ts`
+- [x] Create `src/types/placeholder.ts`
+- [x] Add Placeholder interface
+- [x] Add parsed placeholder types
+- [x] Export from `src/types/index.ts`
 
 **New File - `src/types/placeholder.ts`:**
 ```typescript
@@ -238,11 +257,14 @@ export interface ResolvedTemplate {
 Create a utility module to parse and resolve placeholders in templates.
 
 **Tasks:**
-- [ ] Create `src/main/placeholderParser.ts`
-- [ ] Implement `parsePlaceholders()` function
-- [ ] Implement `resolvePlaceholders()` function
-- [ ] Implement `generateUniqueId()` function
-- [ ] Add unit tests
+- [x] Create `src/main/placeholderParser.ts`
+- [x] Implement `parsePlaceholders()` function
+- [x] Implement `resolvePlaceholders()` function
+- [x] Implement `generateUniqueId()` function
+- [x] Add unit tests
+
+**Notes:**
+- User-entered values can request an auto-generated, labelled ID using the pattern `${id-label}`; the resolver generates an ID, stores it under `label`, and replaces the placeholder with that value for later assertions/correlation.
 
 **New File - `src/main/placeholderParser.ts`:**
 ```typescript
@@ -426,137 +448,26 @@ export function validatePlaceholders(
 Create a React component that automatically renders input fields for each placeholder found in a template.
 
 **Tasks:**
-- [ ] Create `src/renderer/components/PlaceholderFields.tsx`
-- [ ] Parse template to find placeholders
-- [ ] Render input field for each user placeholder
-- [ ] Show read-only field for `{{$id}}` with generated value
-- [ ] Handle value changes
-- [ ] Style inputs consistently
+- [x] Create placeholder field rendering (implemented inline in `App.tsx` instead of a separate component)
+- [x] Parse template text to find placeholders (single-brace supported)
+- [x] Render input field for each user placeholder
+- [x] Show guidance for auto-generated IDs via `${id-label}` tokens
+- [x] Handle value changes
+- [x] Style inputs consistently (reusing existing form styles)
 
 **New File - `src/renderer/components/PlaceholderFields.tsx`:**
 ```tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Placeholder, PlaceholderValues } from '../../types/placeholder';
 
-interface PlaceholderFieldsProps {
-  template: string;
-  values: PlaceholderValues;
-  onChange: (values: PlaceholderValues) => void;
-  generatedIds?: Record<string, string>;
-}
+**Notes on implementation:**
+- Implemented directly inside `App.tsx` using the shared parser; supports `{placeholder}` and `${id-label}` alias tokens for any field.
+- Reuses existing form styles; no separate component/CSS file was added.
 
-// Client-side placeholder parsing (simplified version)
-function parsePlaceholdersClient(template: string): Placeholder[] {
-  const placeholders: Placeholder[] = [];
-  const regex = /\{\{([^}]+)\}\}/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(template)) !== null) {
-    const name = match[1].trim();
-    let type: Placeholder['type'] = 'user';
-    
-    if (name.startsWith('$id')) {
-      type = 'id';
-    } else if (name === '$timestamp') {
-      type = 'timestamp';
-    } else if (name === name.toUpperCase() && /^[A-Z_]+$/.test(name)) {
-      type = 'env';
-    }
-
-    // Only add if not already in list (deduplicate)
-    if (!placeholders.some(p => p.name === name)) {
-      placeholders.push({
-        name,
-        fullMatch: match[0],
-        type,
-        startIndex: match.index,
-        endIndex: match.index + match[0].length,
-      });
-    }
-  }
-
-  return placeholders;
-}
-
-export function PlaceholderFields({ 
-  template, 
-  values, 
-  onChange,
-  generatedIds = {}
-}: PlaceholderFieldsProps): JSX.Element | null {
-  const placeholders = useMemo(
-    () => parsePlaceholdersClient(template),
-    [template]
-  );
-
-  // Filter to only show user-input placeholders and auto-generated IDs
-  const visiblePlaceholders = placeholders.filter(
-    p => p.type === 'user' || p.type === 'id'
-  );
-
-  if (visiblePlaceholders.length === 0) {
-    return null;
-  }
-
-  const handleChange = (name: string, value: string): void => {
-    onChange({ ...values, [name]: value });
-  };
-
-  return (
-    <div className="placeholder-fields">
-      <div className="placeholder-fields-header">
-        <span className="placeholder-fields-title">Template Variables</span>
-      </div>
-      <div className="placeholder-fields-list">
-        {visiblePlaceholders.map((placeholder) => (
-          <div key={placeholder.name} className="placeholder-field">
-            <label htmlFor={`placeholder-${placeholder.name}`}>
-              {placeholder.name.replace(/^\$/, '')}
-              {placeholder.type === 'id' && (
-                <span className="placeholder-auto-badge">auto</span>
-              )}
-            </label>
-            {placeholder.type === 'id' ? (
-              <input
-                id={`placeholder-${placeholder.name}`}
-                type="text"
-                value={generatedIds[placeholder.name] || '(will be generated)'}
-                readOnly
-                className="placeholder-input placeholder-input-readonly"
-              />
-            ) : (
-              <input
-                id={`placeholder-${placeholder.name}`}
-                type="text"
-                value={values[placeholder.name] || ''}
-                onChange={(e) => handleChange(placeholder.name, e.target.value)}
-                placeholder={`Enter ${placeholder.name}`}
-                className="placeholder-input"
-              />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-```
-
-**New CSS - Add to `src/renderer/styles/placeholder-fields.css`:**
-```css
-.placeholder-fields {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.placeholder-fields-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
+**Verification:**
+- Placeholder-driven inputs render for placeholders in the stanza text.
+- Alias tokens `${id-label}` are hinted and resolve to generated IDs at send time.
+- Values update correctly; duplicate placeholders are de-duplicated in the parameter list.
 
 .placeholder-fields-title {
   font-size: 12px;
@@ -635,161 +546,130 @@ export function PlaceholderFields({
 Integrate the PlaceholderFields component into the existing stanza editor in App.tsx.
 
 **Tasks:**
-- [ ] Import PlaceholderFields component
-- [ ] Add placeholder values state
-- [ ] Show PlaceholderFields above stanza textarea when template has placeholders
-- [ ] Resolve placeholders before sending stanza
-- [ ] Track generated IDs for response correlation
+- [x] Import and render placeholder fields (implemented inline in `App.tsx`)
+- [x] Add placeholder values state
+- [x] Show placeholder inputs above the stanza textarea when text contains placeholders
+- [x] Resolve placeholders before sending stanza (supports `{}` and `${id-label}`)
+- [x] Track generated IDs for response correlation
 
 **Files to Modify:**
 - `src/renderer/App.tsx`
 
-**Changes:**
-```tsx
-// Add imports
-import { PlaceholderFields } from './components/PlaceholderFields';
-import type { PlaceholderValues } from '../types/placeholder';
-
-// Add state
-const [placeholderValues, setPlaceholderValues] = useState<PlaceholderValues>({});
-const [generatedIds, setGeneratedIds] = useState<Record<string, string>>({});
-
-// In the stanza editor section, add PlaceholderFields above textarea
-{selectedTemplate && (
-  <PlaceholderFields
-    template={stanzaXml}
-    values={placeholderValues}
-    onChange={setPlaceholderValues}
-    generatedIds={generatedIds}
-  />
-)}
-
-// When sending stanza, resolve placeholders first
-const handleSendStanza = async () => {
-  // Resolve placeholders before sending
-  const { xml: resolvedXml, generatedIds: newIds } = resolvePlaceholders(
-    stanzaXml,
-    placeholderValues,
-    true // auto-generate IDs
-  );
-  
-  setGeneratedIds(prev => ({ ...prev, ...newIds }));
-  
-  await window.virtuoso.sendStanza(selectedAccountId, resolvedXml);
-};
-```
+**Notes on implementation:**
+- Implemented within `App.tsx` (no separate component), using the shared placeholder parser.
+- Inputs render whenever the stanza text contains placeholders; works for both loaded templates and freeform text.
+- Resolution happens at send time; `${id-label}` is honored for any field and tracked for later correlation.
 
 **Verification:**
-- Placeholder fields appear when template has `{{placeholders}}`
-- Values are correctly substituted when sending
-- Generated IDs are tracked for later use
+- Placeholder inputs appear for `{placeholders}` in the editor.
+- Values substitute correctly on send; alias-generated IDs are stored.
 
 ---
 
-### 6. Create Performance Store
+### 6. Create Composition Store
 **Priority:** 🔴 CRITICAL  
 **Estimate:** 3-4 hours
 
 **Description:**  
-Create a storage module for Performances, similar to accountStore and templateStore.
+Create a storage module for Compositions, similar to accountStore and templateStore.
 
 **Tasks:**
-- [ ] Create `src/main/performanceStore.ts`
-- [ ] Implement CRUD operations
-- [ ] Save to `performances.json` file
-- [ ] Add IPC handlers in main.ts
+- [x] Create `src/main/compositionStore.ts`
+- [x] Implement CRUD operations
+- [x] Save to `compositions.json` file
+- [x] Add IPC handlers in main.ts
 
-**New File - `src/main/performanceStore.ts`:**
+**New File - `src/main/compositionStore.ts`:**
 ```typescript
 import fs from 'fs';
 import path from 'path';
-import type { Performance } from '../types/performance';
+import type { Composition } from '../types/composition';
 
-const performancesFile: string = path.join(__dirname, '../../performances.json');
+const compositionsFile: string = path.join(__dirname, '../../compositions.json');
 
-export function loadPerformances(): Performance[] {
+export function loadCompositions(): Composition[] {
   try {
-    if (fs.existsSync(performancesFile)) {
-      const data = fs.readFileSync(performancesFile, 'utf-8');
+    if (fs.existsSync(compositionsFile)) {
+      const data = fs.readFileSync(compositionsFile, 'utf-8');
       const parsed = JSON.parse(data);
-      return parsed.performances || [];
+      return parsed.compositions || [];
     }
   } catch (error) {
-    console.error('Error loading performances:', error);
+    console.error('Error loading compositions:', error);
   }
   return [];
 }
 
-export function savePerformances(performances: Performance[]): void {
+export function saveCompositions(compositions: Composition[]): void {
   try {
     fs.writeFileSync(
-      performancesFile, 
-      JSON.stringify({ performances }, null, 2)
+      compositionsFile, 
+      JSON.stringify({ compositions }, null, 2)
     );
   } catch (error) {
-    console.error('Error saving performances:', error);
+    console.error('Error saving compositions:', error);
   }
 }
 
-export function getPerformance(performanceId: string): Performance | null {
-  const performances = loadPerformances();
-  return performances.find(p => p.id === performanceId) || null;
+export function getComposition(compositionId: string): Composition | null {
+  const compositions = loadCompositions();
+  return compositions.find(p => p.id === compositionId) || null;
 }
 
-export function addPerformance(performance: Performance): void {
-  const performances = loadPerformances();
-  const existingIndex = performances.findIndex(p => p.id === performance.id);
+export function addComposition(composition: Composition): void {
+  const compositions = loadCompositions();
+  const existingIndex = compositions.findIndex(p => p.id === composition.id);
   
   if (existingIndex >= 0) {
-    performances[existingIndex] = {
-      ...performance,
+    compositions[existingIndex] = {
+      ...composition,
       updated: new Date().toISOString(),
     };
   } else {
-    performances.push({
-      ...performance,
+    compositions.push({
+      ...composition,
       created: new Date().toISOString(),
       updated: new Date().toISOString(),
     });
   }
   
-  savePerformances(performances);
+  saveCompositions(compositions);
 }
 
-export function deletePerformance(performanceId: string): void {
-  const performances = loadPerformances();
-  const filtered = performances.filter(p => p.id !== performanceId);
-  savePerformances(filtered);
+export function deleteComposition(compositionId: string): void {
+  const compositions = loadCompositions();
+  const filtered = compositions.filter(p => p.id !== compositionId);
+  saveCompositions(filtered);
 }
 
-export function exportPerformance(performanceId: string, filePath: string): boolean {
+export function exportComposition(compositionId: string, filePath: string): boolean {
   try {
-    const performance = getPerformance(performanceId);
-    if (!performance) {
+    const composition = getComposition(compositionId);
+    if (!composition) {
       return false;
     }
-    fs.writeFileSync(filePath, JSON.stringify(performance, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(composition, null, 2));
     return true;
   } catch (error) {
-    console.error('Error exporting performance:', error);
+    console.error('Error exporting composition:', error);
     return false;
   }
 }
 
-export function importPerformance(filePath: string): Performance | null {
+export function importComposition(filePath: string): Composition | null {
   try {
     const data = fs.readFileSync(filePath, 'utf-8');
-    const performance = JSON.parse(data) as Performance;
+    const composition = JSON.parse(data) as Composition;
     
     // Generate new ID to avoid conflicts
-    performance.id = `perf_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    performance.created = new Date().toISOString();
-    performance.updated = new Date().toISOString();
+    composition.id = `perf_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    composition.created = new Date().toISOString();
+    composition.updated = new Date().toISOString();
     
-    addPerformance(performance);
-    return performance;
+    addComposition(composition);
+    return composition;
   } catch (error) {
-    console.error('Error importing performance:', error);
+    console.error('Error importing composition:', error);
     return null;
   }
 }
@@ -798,62 +678,65 @@ export function importPerformance(filePath: string): Performance | null {
 **Add IPC handlers to `src/main/main.ts`:**
 ```typescript
 import {
-  loadPerformances,
-  getPerformance,
-  addPerformance,
-  deletePerformance,
-  exportPerformance,
-  importPerformance,
-} from './performanceStore';
+  loadCompositions,
+  getComposition,
+  addComposition,
+  deleteComposition,
+  exportComposition,
+  importComposition,
+} from './compositionStore';
 
-// Performance IPC handlers
-ipcMain.handle('load-performances', async (): Promise<Performance[]> => {
-  return loadPerformances();
+// Composition IPC handlers
+ipcMain.handle('load-compositions', async (): Promise<Composition[]> => {
+  return loadCompositions();
 });
 
-ipcMain.handle('get-performance', async (_event, performanceId: string): Promise<Performance | null> => {
-  return getPerformance(performanceId);
+ipcMain.handle('get-composition', async (_event, compositionId: string): Promise<Composition | null> => {
+  return getComposition(compositionId);
 });
 
-ipcMain.handle('save-performance', async (_event, performance: Performance): Promise<{ success: boolean }> => {
-  addPerformance(performance);
+ipcMain.handle('save-composition', async (_event, composition: Composition): Promise<{ success: boolean }> => {
+  addComposition(composition);
   return { success: true };
 });
 
-ipcMain.handle('delete-performance', async (_event, performanceId: string): Promise<{ success: boolean }> => {
-  deletePerformance(performanceId);
+ipcMain.handle('delete-composition', async (_event, compositionId: string): Promise<{ success: boolean }> => {
+  deleteComposition(compositionId);
   return { success: true };
 });
 
-ipcMain.handle('export-performance', async (_event, performanceId: string, filePath: string): Promise<{ success: boolean }> => {
-  const success = exportPerformance(performanceId, filePath);
+ipcMain.handle('export-composition', async (_event, compositionId: string, filePath: string): Promise<{ success: boolean }> => {
+  const success = exportComposition(compositionId, filePath);
   return { success };
 });
 
-ipcMain.handle('import-performance', async (_event, filePath: string): Promise<{ success: boolean; performance?: Performance }> => {
-  const performance = importPerformance(filePath);
-  return { success: !!performance, performance: performance || undefined };
+ipcMain.handle('import-composition', async (_event, filePath: string): Promise<{ success: boolean; composition?: Composition }> => {
+  const composition = importComposition(filePath);
+  return { success: !!composition, composition: composition || undefined };
 });
 ```
 
 **Update preload.ts:**
 ```typescript
 // Add to VirtuosoAPI interface and implementation
-loadPerformances: () => ipcRenderer.invoke('load-performances'),
-getPerformance: (performanceId: string) => ipcRenderer.invoke('get-performance', performanceId),
-savePerformance: (performance: unknown) => ipcRenderer.invoke('save-performance', performance),
-deletePerformance: (performanceId: string) => ipcRenderer.invoke('delete-performance', performanceId),
-exportPerformance: (performanceId: string, filePath: string) => ipcRenderer.invoke('export-performance', performanceId, filePath),
-importPerformance: (filePath: string) => ipcRenderer.invoke('import-performance', filePath),
+loadCompositions: () => ipcRenderer.invoke('load-compositions'),
+getComposition: (compositionId: string) => ipcRenderer.invoke('get-composition', compositionId),
+saveComposition: (composition: unknown) => ipcRenderer.invoke('save-composition', composition),
+deleteComposition: (compositionId: string) => ipcRenderer.invoke('delete-composition', compositionId),
+exportComposition: (compositionId: string, filePath: string) => ipcRenderer.invoke('export-composition', compositionId, filePath),
+importComposition: (filePath: string) => ipcRenderer.invoke('import-composition', filePath),
 ```
 
 **Verification:**
-- Can save a Performance
-- Can load all Performances
-- Can get a single Performance
-- Can delete a Performance
+- Can save a Composition
+- Can load all Compositions
+- Can get a single Composition
+- Can delete a Composition
 - Can export to file
 - Can import from file
+
+**Notes:**
+- Backend + IPC implemented and covered by unit tests (`src/main/__tests__/compositionStore.test.ts`); renderer/UI wiring is not yet implemented, so the feature is not exposed in the app.
 
 ---
 
@@ -865,244 +748,15 @@ importPerformance: (filePath: string) => ipcRenderer.invoke('import-performance'
 Create a React hook to manage Composer state (recording mode, captured stanzas, etc.).
 
 **Tasks:**
-- [ ] Create `src/renderer/hooks/useComposer.ts`
-- [ ] Implement start/stop composing
-- [ ] Capture actions as stanzas
-- [ ] Generate Performance from captured stanzas
-- [ ] Handle account references
+- [x] Create `src/renderer/hooks/useComposer.ts`
+- [x] Implement start/stop composing
+- [x] Capture actions as stanzas
+- [x] Generate Composition from captured stanzas
+- [x] Handle account references
 
-**New File - `src/renderer/hooks/useComposer.ts`:**
-```typescript
-import { useState, useCallback, useRef } from 'react';
-import type { Performance, Stanza, StanzaType, AccountReference } from '../../types/performance';
-
-interface ComposerState {
-  isComposing: boolean;
-  stanzas: Stanza[];
-  accounts: AccountReference[];
-  startTime: number | null;
-}
-
-interface UseComposerReturn {
-  isComposing: boolean;
-  stanzas: Stanza[];
-  startComposing: () => void;
-  stopComposing: () => Performance | null;
-  cancelComposing: () => void;
-  captureConnect: (accountAlias: string, jid: string) => void;
-  captureDisconnect: (accountAlias: string) => void;
-  captureSend: (accountAlias: string, xml: string, generatedIds?: Record<string, string>) => void;
-  addCue: (accountAlias: string, matchType: string, matchExpression: string, timeout?: number) => void;
-  addAssertion: (accountAlias: string, assertionType: string, expression: string, expected?: string) => void;
-}
-
-function generateStanzaId(): string {
-  return `stanza_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-}
-
-function generatePerformanceId(): string {
-  return `perf_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-}
-
-export function useComposer(): UseComposerReturn {
-  const [state, setState] = useState<ComposerState>({
-    isComposing: false,
-    stanzas: [],
-    accounts: [],
-    startTime: null,
-  });
-
-  const accountsRef = useRef<Map<string, AccountReference>>(new Map());
-
-  const startComposing = useCallback(() => {
-    setState({
-      isComposing: true,
-      stanzas: [],
-      accounts: [],
-      startTime: Date.now(),
-    });
-    accountsRef.current.clear();
-  }, []);
-
-  const stopComposing = useCallback((): Performance | null => {
-    if (!state.isComposing || state.stanzas.length === 0) {
-      setState(prev => ({ ...prev, isComposing: false }));
-      return null;
-    }
-
-    const performance: Performance = {
-      id: generatePerformanceId(),
-      name: 'New Performance',
-      description: '',
-      version: '1.0.0',
-      created: new Date().toISOString(),
-      updated: new Date().toISOString(),
-      accounts: Array.from(accountsRef.current.values()),
-      stanzas: state.stanzas,
-      variables: {},
-      tags: [],
-    };
-
-    setState({
-      isComposing: false,
-      stanzas: [],
-      accounts: [],
-      startTime: null,
-    });
-    accountsRef.current.clear();
-
-    return performance;
-  }, [state.isComposing, state.stanzas]);
-
-  const cancelComposing = useCallback(() => {
-    setState({
-      isComposing: false,
-      stanzas: [],
-      accounts: [],
-      startTime: null,
-    });
-    accountsRef.current.clear();
-  }, []);
-
-  const ensureAccount = useCallback((alias: string, jid?: string) => {
-    if (!accountsRef.current.has(alias)) {
-      accountsRef.current.set(alias, {
-        alias,
-        jid: jid || alias,
-      });
-    }
-  }, []);
-
-  const captureConnect = useCallback((accountAlias: string, jid: string) => {
-    if (!state.isComposing) return;
-
-    ensureAccount(accountAlias, jid);
-
-    const stanza: Stanza = {
-      id: generateStanzaId(),
-      type: 'connect',
-      accountAlias,
-      description: `Connect as ${accountAlias}`,
-      data: { type: 'connect' },
-    };
-
-    setState(prev => ({
-      ...prev,
-      stanzas: [...prev.stanzas, stanza],
-    }));
-  }, [state.isComposing, ensureAccount]);
-
-  const captureDisconnect = useCallback((accountAlias: string) => {
-    if (!state.isComposing) return;
-
-    const stanza: Stanza = {
-      id: generateStanzaId(),
-      type: 'disconnect',
-      accountAlias,
-      description: `Disconnect ${accountAlias}`,
-      data: { type: 'disconnect' },
-    };
-
-    setState(prev => ({
-      ...prev,
-      stanzas: [...prev.stanzas, stanza],
-    }));
-  }, [state.isComposing]);
-
-  const captureSend = useCallback((
-    accountAlias: string, 
-    xml: string, 
-    generatedIds?: Record<string, string>
-  ) => {
-    if (!state.isComposing) return;
-
-    const stanza: Stanza = {
-      id: generateStanzaId(),
-      type: 'send',
-      accountAlias,
-      description: `${accountAlias} sends stanza`,
-      data: { 
-        type: 'send', 
-        xml,
-        generatedIds,
-      },
-    };
-
-    setState(prev => ({
-      ...prev,
-      stanzas: [...prev.stanzas, stanza],
-    }));
-  }, [state.isComposing]);
-
-  const addCue = useCallback((
-    accountAlias: string,
-    matchType: string,
-    matchExpression: string,
-    timeout: number = 10000
-  ) => {
-    if (!state.isComposing) return;
-
-    const stanza: Stanza = {
-      id: generateStanzaId(),
-      type: 'cue',
-      accountAlias,
-      description: `Wait for response (${matchType})`,
-      data: {
-        type: 'cue',
-        description: `Wait for ${matchType} match`,
-        matchType: matchType as 'contains' | 'xpath' | 'regex' | 'id',
-        matchExpression,
-        timeout,
-      },
-    };
-
-    setState(prev => ({
-      ...prev,
-      stanzas: [...prev.stanzas, stanza],
-    }));
-  }, [state.isComposing]);
-
-  const addAssertion = useCallback((
-    accountAlias: string,
-    assertionType: string,
-    expression: string,
-    expected?: string
-  ) => {
-    if (!state.isComposing) return;
-
-    const stanza: Stanza = {
-      id: generateStanzaId(),
-      type: 'assert',
-      accountAlias,
-      description: `Assert ${assertionType}: ${expression}`,
-      data: {
-        type: 'assert',
-        assertionType: assertionType as 'xpath' | 'contains' | 'regex' | 'equals',
-        expression,
-        expected,
-      },
-    };
-
-    setState(prev => ({
-      ...prev,
-      stanzas: [...prev.stanzas, stanza],
-    }));
-  }, [state.isComposing]);
-
-  return {
-    isComposing: state.isComposing,
-    stanzas: state.stanzas,
-    startComposing,
-    stopComposing,
-    cancelComposing,
-    captureConnect,
-    captureDisconnect,
-    captureSend,
-    addCue,
-    addAssertion,
-  };
-}
-```
+**Notes on implementation:**
+- Implemented with a reducer-based hook in `src/renderer/hooks/useComposer.ts` and pure helpers for ID generation and composition building.
+- Unit tests added at `src/renderer/hooks/__tests__/useComposer.test.ts` covering start/stop, stanza capture, account tracking, and composition generation.
 
 **Verification:**
 - Hook tracks composing state
@@ -1110,81 +764,81 @@ export function useComposer(): UseComposerReturn {
 - Captures connect actions
 - Captures disconnect actions
 - Captures send actions
-- Generates valid Performance object
+- Generates valid Composition object
 
 ---
 
-### 8. Create Performances Sidebar Component
+### 8. Create Compositions Sidebar Component
 **Priority:** 🔴 CRITICAL  
 **Estimate:** 6-8 hours
 
 **Description:**  
-Create the right sidebar UI for Performances (list, compose button, recording state).
+Create the right sidebar UI for Compositions (list, compose button, recording state).
 
 **Tasks:**
-- [ ] Create `src/renderer/components/performances/PerformancesSidebar.tsx`
-- [ ] Create `src/renderer/components/performances/PerformanceList.tsx`
-- [ ] Create `src/renderer/components/performances/ComposerPanel.tsx`
-- [ ] Create `src/renderer/components/performances/StanzaItem.tsx`
+- [ ] Create `src/renderer/components/compositions/CompositionsSidebar.tsx`
+- [ ] Create `src/renderer/components/compositions/CompositionList.tsx`
+- [ ] Create `src/renderer/components/compositions/ComposerPanel.tsx`
+- [ ] Create `src/renderer/components/compositions/StanzaItem.tsx`
 - [ ] Add styles
 
-**New File - `src/renderer/components/performances/PerformancesSidebar.tsx`:**
+**New File - `src/renderer/components/compositions/CompositionsSidebar.tsx`:**
 ```tsx
 import React, { useState, useEffect } from 'react';
-import { PerformanceList } from './PerformanceList';
+import { CompositionList } from './CompositionList';
 import { ComposerPanel } from './ComposerPanel';
-import type { Performance, Stanza } from '../../../types/performance';
+import type { Composition, Stanza } from '../../../types/composition';
 
-interface PerformancesSidebarProps {
+interface CompositionsSidebarProps {
   isComposing: boolean;
   composedStanzas: Stanza[];
   onStartComposing: () => void;
   onStopComposing: () => void;
   onCancelComposing: () => void;
-  onPlayPerformance: (performance: Performance) => void;
-  onEditPerformance: (performance: Performance) => void;
-  onDeletePerformance: (performanceId: string) => void;
+  onPlayComposition: (composition: Composition) => void;
+  onEditComposition: (composition: Composition) => void;
+  onDeleteComposition: (compositionId: string) => void;
 }
 
-export function PerformancesSidebar({
+export function CompositionsSidebar({
   isComposing,
   composedStanzas,
   onStartComposing,
   onStopComposing,
   onCancelComposing,
-  onPlayPerformance,
-  onEditPerformance,
-  onDeletePerformance,
-}: PerformancesSidebarProps): JSX.Element {
-  const [performances, setPerformances] = useState<Performance[]>([]);
+  onPlayComposition,
+  onEditComposition,
+  onDeleteComposition,
+}: CompositionsSidebarProps): JSX.Element {
+  const [compositions, setCompositions] = useState<Composition[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadPerformances();
+    loadCompositions();
   }, []);
 
-  const loadPerformances = async () => {
+  const loadCompositions = async () => {
     setLoading(true);
     try {
-      const loaded = await window.virtuoso.loadPerformances();
-      setPerformances(loaded as Performance[]);
+      const loaded = await window.virtuoso.loadCompositions();
+      setCompositions(loaded as Composition[]);
     } catch (error) {
-      console.error('Failed to load performances:', error);
+      console.error('Failed to load compositions:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (performanceId: string) => {
-    await window.virtuoso.deletePerformance(performanceId);
-    onDeletePerformance(performanceId);
-    loadPerformances();
+  const handleDelete = async (compositionId: string) => {
+    await window.virtuoso.deleteComposition(compositionId);
+    onDeleteComposition(compositionId);
+    loadCompositions();
   };
 
   return (
-    <div className="performances-sidebar">
-      <div className="performances-sidebar-header">
-        <h2>Performances</h2>
+    <div className="compositions-sidebar">
+      <div className="compositions-sidebar-header">
+        <h2>Compositions</h2>
         {!isComposing && (
           <button 
             className="compose-button"
@@ -1202,11 +856,11 @@ export function PerformancesSidebar({
           onCancel={onCancelComposing}
         />
       ) : (
-        <PerformanceList
-          performances={performances}
+        <CompositionList
+          compositions={compositions}
           loading={loading}
-          onPlay={onPlayPerformance}
-          onEdit={onEditPerformance}
+          onPlay={onPlayComposition}
+          onEdit={onEditComposition}
           onDelete={handleDelete}
         />
       )}
@@ -1215,67 +869,67 @@ export function PerformancesSidebar({
 }
 ```
 
-**New File - `src/renderer/components/performances/PerformanceList.tsx`:**
+**New File - `src/renderer/components/compositions/CompositionList.tsx`:**
 ```tsx
 import React from 'react';
-import type { Performance } from '../../../types/performance';
+import type { Composition } from '../../../types/composition';
 
-interface PerformanceListProps {
-  performances: Performance[];
+interface CompositionListProps {
+  compositions: Composition[];
   loading: boolean;
-  onPlay: (performance: Performance) => void;
-  onEdit: (performance: Performance) => void;
-  onDelete: (performanceId: string) => void;
+  onPlay: (composition: Composition) => void;
+  onEdit: (composition: Composition) => void;
+  onDelete: (compositionId: string) => void;
 }
 
-export function PerformanceList({
-  performances,
+export function CompositionList({
+  compositions,
   loading,
   onPlay,
   onEdit,
   onDelete,
-}: PerformanceListProps): JSX.Element {
+}: CompositionListProps): JSX.Element {
   if (loading) {
-    return <div className="performance-list-loading">Loading...</div>;
+    return <div className="composition-list-loading">Loading...</div>;
   }
 
-  if (performances.length === 0) {
+  if (compositions.length === 0) {
     return (
-      <div className="performance-list-empty">
-        <p>No performances yet.</p>
+      <div className="composition-list-empty">
+        <p>No compositions yet.</p>
         <p className="hint">Click "Compose New" to create one.</p>
       </div>
     );
   }
 
   return (
-    <div className="performance-list">
-      {performances.map((performance) => (
-        <div key={performance.id} className="performance-item">
-          <div className="performance-item-info">
-            <span className="performance-item-name">{performance.name}</span>
-            <span className="performance-item-meta">
-              {performance.stanzas.length} stanzas
+    <div className="composition-list">
+      {compositions.map((composition) => (
+        <div key={composition.id} className="composition-item">
+          <div className="composition-item-info">
+            <span className="composition-item-name">{composition.name}</span>
+            <span className="composition-item-meta">
+              {composition.stanzas.length} stanzas
             </span>
           </div>
-          <div className="performance-item-actions">
+          <div className="composition-item-actions">
             <button 
               className="btn-icon" 
-              onClick={() => onPlay(performance)}
+              onClick={() => onPlay(composition)}
               title="Play"
             >
               ▶
             </button>
             <button 
               className="btn-icon" 
-              onClick={() => onEdit(performance)}
+              onClick={() => onEdit(composition)}
               title="Edit"
             >
               ✎
             </button>
             <button 
               className="btn-icon btn-danger" 
-              onClick={() => onDelete(performance.id)}
+              onClick={() => onDelete(composition.id)}
               title="Delete"
             >
               ✕
@@ -1288,11 +942,11 @@ export function PerformanceList({
 }
 ```
 
-**New File - `src/renderer/components/performances/ComposerPanel.tsx`:**
+**New File - `src/renderer/components/compositions/ComposerPanel.tsx`:**
 ```tsx
 import React from 'react';
 import { StanzaItem } from './StanzaItem';
-import type { Stanza } from '../../../types/performance';
+import type { Stanza } from '../../../types/composition';
 
 interface ComposerPanelProps {
   stanzas: Stanza[];
@@ -1349,10 +1003,10 @@ export function ComposerPanel({
 }
 ```
 
-**New File - `src/renderer/components/performances/StanzaItem.tsx`:**
+**New File - `src/renderer/components/compositions/StanzaItem.tsx`:**
 ```tsx
 import React from 'react';
-import type { Stanza } from '../../../types/performance';
+import type { Stanza } from '../../../types/composition';
 
 interface StanzaItemProps {
   stanza: Stanza;
@@ -1392,10 +1046,10 @@ export function StanzaItem({
 - "Compose New" button starts composing
 - Composing state shows recording indicator
 - Captured stanzas appear in real-time
-- Stop saves the Performance
+- Stop saves the Composition
 - Cancel discards and exits
-- Performance list shows saved Performances
-- Can play/edit/delete Performances
+- Composition list shows saved Compositions
+- Can play/edit/delete Compositions
 
 ---
 
@@ -1409,16 +1063,16 @@ Wire up the Composer to capture actions from the main App.tsx.
 **Tasks:**
 - [ ] Add useComposer hook to App.tsx
 - [ ] Pass composer callbacks to action handlers
-- [ ] Add PerformancesSidebar to layout
+- [ ] Add CompositionsSidebar to layout
 - [ ] Update CSS for three-column layout
-- [ ] Save Performance when composing stops
+- [ ] Save Composition when composing stops
 
 **Verification:**
 - Three-column layout renders correctly
 - Clicking connect while composing captures it
 - Clicking disconnect while composing captures it
 - Sending stanza while composing captures it
-- Stopping saves Performance to list
+- Stopping saves Composition to list
 
 ---
 
@@ -1430,20 +1084,20 @@ Wire up the Composer to capture actions from the main App.tsx.
 Create a basic playback engine that executes Stanzas sequentially.
 
 **Tasks:**
-- [ ] Create `src/main/performanceRunner.ts`
+- [ ] Create `src/main/compositionRunner.ts`
 - [ ] Implement sequential stanza execution
 - [ ] Handle connect/disconnect/send stanzas
 - [ ] Add IPC handlers for playback
 - [ ] Create basic playback UI
 
-**New File - `src/main/performanceRunner.ts`:**
+**New File - `src/main/compositionRunner.ts`:**
 ```typescript
 import type { 
-  Performance, 
+  Composition, 
   Stanza, 
   PlaybackResult, 
   StanzaResult 
-} from '../types/performance';
+} from '../types/composition';
 import { connectAccount, disconnectAccount, sendStanza } from './xmppManager';
 import { loadAccounts } from './accountStore';
 import type { Account } from '../types/account';
@@ -1455,17 +1109,17 @@ interface RunnerCallbacks {
   onError: (error: Error) => void;
 }
 
-export async function runPerformance(
-  performance: Performance,
+export async function runComposition(
+  composition: Composition,
   callbacks: RunnerCallbacks
 ): Promise<PlaybackResult> {
   const startTime = new Date().toISOString();
   const stanzaResults: StanzaResult[] = [];
   const accounts = loadAccounts();
   
-  // Map performance account aliases to actual accounts
+  // Map composition account aliases to actual accounts
   const accountMap = new Map<string, Account>();
-  for (const ref of performance.accounts) {
+  for (const ref of composition.accounts) {
     const account = accounts.find(a => a.jid === ref.jid || a.name === ref.alias);
     if (account) {
       accountMap.set(ref.alias, account);
@@ -1474,7 +1128,7 @@ export async function runPerformance(
 
   let hasFailure = false;
 
-  for (const stanza of performance.stanzas) {
+  for (const stanza of composition.stanzas) {
     callbacks.onStanzaStart(stanza.id);
     const stanzaStart = Date.now();
 
@@ -1504,7 +1158,7 @@ export async function runPerformance(
 
   const endTime = new Date().toISOString();
   const result: PlaybackResult = {
-    performanceId: performance.id,
+    compositionId: composition.id,
     status: hasFailure ? 'failed' : 'passed',
     startTime,
     endTime,
@@ -1597,7 +1251,7 @@ async function executeStanza(
 ```
 
 **Verification:**
-- Can play a Performance
+- Can play a Composition
 - Connect stanzas work
 - Disconnect stanzas work
 - Send stanzas work
@@ -1609,14 +1263,14 @@ async function executeStanza(
 
 | Task | Priority | Estimate | Dependencies |
 |------|----------|----------|--------------|
-| Performance type definitions | 🔴 CRITICAL | 2-3 hours | Sprint 0 |
+| Composition type definitions | 🔴 CRITICAL | 2-3 hours | Sprint 0 |
 | Placeholder type definitions | 🔴 CRITICAL | 1 hour | Sprint 0 |
 | Placeholder parser | 🔴 CRITICAL | 3-4 hours | Types |
 | PlaceholderFields component | 🔴 CRITICAL | 4-5 hours | Parser |
 | Integrate into stanza editor | 🔴 CRITICAL | 2-3 hours | Component |
-| Performance store | 🔴 CRITICAL | 3-4 hours | Types |
+| Composition store | 🔴 CRITICAL | 3-4 hours | Types |
 | useComposer hook | 🔴 CRITICAL | 4-5 hours | Types |
-| Performances sidebar | 🔴 CRITICAL | 6-8 hours | Hook, Store |
+| Compositions sidebar | 🔴 CRITICAL | 6-8 hours | Hook, Store |
 | Integrate composer | 🔴 CRITICAL | 4-5 hours | Sidebar |
 | Basic playback | 🔴 CRITICAL | 6-8 hours | Store, Runner |
 
@@ -1630,8 +1284,8 @@ async function executeStanza(
 - [ ] Placeholder fields auto-generate in UI
 - [ ] Can start/stop composing
 - [ ] Actions captured during composing
-- [ ] Performances saved to JSON
-- [ ] Performance list displays in sidebar
+- [ ] Compositions saved to JSON
+- [ ] Composition list displays in sidebar
 - [ ] Basic playback executes stanzas
 - [ ] All TypeScript compiles without errors
 - [ ] Manual testing passes
